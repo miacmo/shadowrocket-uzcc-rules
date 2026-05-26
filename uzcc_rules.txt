@@ -1,7 +1,34 @@
-# Bing 单独直连
+# Bing / Microsoft Copilot / 微软 AI 单独直连
 DOMAIN-SUFFIX,bing.com,DIRECT
 DOMAIN-SUFFIX,bing.net,DIRECT
+DOMAIN-SUFFIX,copilot.microsoft.com,DIRECT
+DOMAIN-SUFFIX,copilot.cloud.microsoft,DIRECT
+DOMAIN-SUFFIX,copilotstudio.microsoft.com,DIRECT
+DOMAIN-SUFFIX,bingapis.com,DIRECT
 
-# AI 分流规则集
-# 该规则集由 merge_rules.py 从 OverseasAI.list 拉取，并按白名单提取生成
-RULE-SET,https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/ai_rule_set.list,AI
+# OpenAI / ChatGPT
+RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/OpenAI/OpenAI.list,AI
+
+# Claude / Anthropic
+RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Claude/Claude.list,AI
+RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Anthropic/Anthropic.list,AI
+
+# Sora
+DOMAIN-SUFFIX,sora.com,AI
+
+# Perplexity
+DOMAIN-SUFFIX,perplexity.ai,AI
+DOMAIN-SUFFIX,perplexity.com,AI
+DOMAIN-SUFFIX,pplx.ai,AI
+DOMAIN,pplx-res.cloudinary.com,AI
+DOMAIN,ppl-ai-file-upload.s3.amazonaws.com,AI
+
+# Poe
+DOMAIN-SUFFIX,poe.com,AI
+DOMAIN-SUFFIX,poecdn.net,AI
+
+# Grok / xAI / Groq
+DOMAIN-SUFFIX,x.ai,AI
+DOMAIN-SUFFIX,grok.com,AI
+DOMAIN-SUFFIX,grok.x.com,AI
+DOMAIN-SUFFIX,groq.com,AI
