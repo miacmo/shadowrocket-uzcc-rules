@@ -2,7 +2,17 @@
 
 在 [Johnshall](https://github.com/Johnshall) 的 Shadowrocket 分流规则基础上，叠加一层面向海外 AI 服务的自定义分流，自动生成可供 Shadowrocket 订阅的配置文件。
 
-本仓库的重点是 **AI 分流**：在保留原作者 `sr_cnip` 规则持续更新的前提下，把部分常用海外 AI 服务单独分流到 `AI` 分组，再由用户按地区节点选择出口。
+本仓库的重点是 **AI 分流**：把部分常用海外 AI 服务单独归入 `AI` 分组，再按地区节点选择出口；同时完整保留原作者 `sr_cnip` 规则的持续更新能力。
+
+## 使用方式
+
+在 Shadowrocket 中添加配置订阅，填入：
+
+```text
+https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/sr_cnip_ai_routing.conf
+```
+
+添加后更新配置即可。
 
 ## 工作原理
 
@@ -42,16 +52,6 @@ AI-台湾 / AI-香港 / AI-新加坡 / AI-日本 / AI-美国 / AI-其他
 ```text
 剩余 / 流量 / 到期 / 套餐
 ```
-
-## 使用方式
-
-在 Shadowrocket 中添加配置订阅，填入：
-
-```text
-https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/sr_cnip_ai_routing.conf
-```
-
-添加后更新配置即可。
 
 ## 文件说明
 
