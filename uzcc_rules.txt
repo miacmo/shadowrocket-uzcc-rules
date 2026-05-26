@@ -1,0 +1,104 @@
+# Bing 单独直连
+DOMAIN-SUFFIX,bing.com,DIRECT
+DOMAIN-SUFFIX,bing.net,DIRECT
+
+# OpenAI / ChatGPT / Sora
+DOMAIN-SUFFIX,openai.com,AI
+DOMAIN-SUFFIX,chatgpt.com,AI
+DOMAIN-SUFFIX,oaistatic.com,AI
+DOMAIN-SUFFIX,oaiusercontent.com,AI
+DOMAIN-SUFFIX,sora.com,AI
+DOMAIN-SUFFIX,auth0.openai.com,AI
+DOMAIN-SUFFIX,cdn.oaistatic.com,AI
+DOMAIN-SUFFIX,files.oaiusercontent.com,AI
+
+# Claude
+DOMAIN-SUFFIX,anthropic.com,AI
+DOMAIN-SUFFIX,claude.ai,AI
+DOMAIN-SUFFIX,claudeusercontent.com,AI
+DOMAIN-SUFFIX,console.anthropic.com,AI
+
+# Perplexity
+DOMAIN-SUFFIX,perplexity.ai,AI
+
+# Poe
+DOMAIN-SUFFIX,poe.com,AI
+DOMAIN-SUFFIX,poecdn.net,AI
+
+# xAI / Grok / Groq
+DOMAIN-SUFFIX,x.ai,AI
+DOMAIN-SUFFIX,grok.com,AI
+DOMAIN-SUFFIX,groq.com,AI
+
+# Mistral
+DOMAIN-SUFFIX,mistral.ai,AI
+
+# DeepSeek
+DOMAIN-SUFFIX,deepseek.com,AI
+DOMAIN-SUFFIX,deepseek.ai,AI
+
+# Character AI
+DOMAIN-SUFFIX,character.ai,AI
+DOMAIN-SUFFIX,characterai.io,AI
+
+# Midjourney
+DOMAIN-SUFFIX,midjourney.com,AI
+DOMAIN-SUFFIX,cdn.midjourney.com,AI
+
+# Stability / DreamStudio
+DOMAIN-SUFFIX,stability.ai,AI
+DOMAIN-SUFFIX,dreamstudio.ai,AI
+
+# Runway
+DOMAIN-SUFFIX,runwayml.com,AI
+DOMAIN-SUFFIX,runwayml.cloud,AI
+
+# Pika
+DOMAIN-SUFFIX,pika.art,AI
+
+# Suno
+DOMAIN-SUFFIX,suno.com,AI
+DOMAIN-SUFFIX,suno.ai,AI
+
+# ElevenLabs
+DOMAIN-SUFFIX,elevenlabs.io,AI
+
+# Cursor
+DOMAIN-SUFFIX,cursor.com,AI
+DOMAIN-SUFFIX,cursor.sh,AI
+
+# Replit
+DOMAIN-SUFFIX,replit.com,AI
+
+# Hugging Face
+DOMAIN-SUFFIX,huggingface.co,AI
+DOMAIN-SUFFIX,hf.co,AI
+
+# Replicate
+DOMAIN-SUFFIX,replicate.com,AI
+DOMAIN-SUFFIX,replicate.delivery,AI
+
+# Cohere
+DOMAIN-SUFFIX,cohere.com,AI
+DOMAIN-SUFFIX,cohere.ai,AI
+
+# Together
+DOMAIN-SUFFIX,together.ai,AI
+DOMAIN-SUFFIX,together.xyz,AI
+
+# Fireworks / OpenRouter
+DOMAIN-SUFFIX,fireworks.ai,AI
+DOMAIN-SUFFIX,openrouter.ai,AI
+
+# 搜索与开发类工具
+DOMAIN-SUFFIX,phind.com,AI
+DOMAIN-SUFFIX,devv.ai,AI
+DOMAIN-SUFFIX,forefront.ai,AI
+
+# 演示与文档类工具
+DOMAIN-SUFFIX,gamma.app,AI
+DOMAIN-SUFFIX,tome.app,AI
+
+# 带 AI 功能的常用工具，命中后整站走 AI 分组
+DOMAIN-SUFFIX,notion.so,AI
+DOMAIN-SUFFIX,notion.site,AI
