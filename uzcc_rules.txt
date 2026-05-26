@@ -2,33 +2,32 @@
 DOMAIN-SUFFIX,bing.com,DIRECT
 DOMAIN-SUFFIX,bing.net,DIRECT
 
-# OpenAI / ChatGPT / Sora
-DOMAIN-SUFFIX,openai.com,AI
-DOMAIN-SUFFIX,chatgpt.com,AI
-DOMAIN-SUFFIX,oaistatic.com,AI
-DOMAIN-SUFFIX,oaiusercontent.com,AI
+# OpenAI / ChatGPT
+RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/OpenAI/OpenAI.list,AI
+
+# Claude / Anthropic
+RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Claude/Claude.list,AI
+RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Anthropic/Anthropic.list,AI
+
+# Sora
 DOMAIN-SUFFIX,sora.com,AI
-DOMAIN-SUFFIX,auth0.openai.com,AI
-DOMAIN-SUFFIX,cdn.oaistatic.com,AI
-DOMAIN-SUFFIX,files.oaiusercontent.com,AI
-
-# Claude
-DOMAIN-SUFFIX,anthropic.com,AI
-DOMAIN-SUFFIX,claude.ai,AI
-DOMAIN-SUFFIX,claudeusercontent.com,AI
-DOMAIN-SUFFIX,console.anthropic.com,AI
-
-# Perplexity
-DOMAIN-SUFFIX,perplexity.ai,AI
-
-# Poe
-DOMAIN-SUFFIX,poe.com,AI
-DOMAIN-SUFFIX,poecdn.net,AI
 
 # xAI / Grok / Groq
 DOMAIN-SUFFIX,x.ai,AI
 DOMAIN-SUFFIX,grok.com,AI
+DOMAIN-SUFFIX,grok.x.com,AI
 DOMAIN-SUFFIX,groq.com,AI
+
+# Perplexity
+DOMAIN-SUFFIX,perplexity.ai,AI
+DOMAIN-SUFFIX,perplexity.com,AI
+DOMAIN-SUFFIX,pplx.ai,AI
+DOMAIN,pplx-res.cloudinary.com,AI
+DOMAIN,ppl-ai-file-upload.s3.amazonaws.com,AI
+
+# Poe
+DOMAIN-SUFFIX,poe.com,AI
+DOMAIN-SUFFIX,poecdn.net,AI
 
 # Mistral
 DOMAIN-SUFFIX,mistral.ai,AI
