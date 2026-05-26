@@ -5,9 +5,6 @@ name: Update Shadowrocket Rules
   schedule:
     # 北京时间 10:00，对应 UTC 02:00
     - cron: "0 2 * * *"
-  push:
-    branches:
-      - main
 
 permissions:
   contents: write
