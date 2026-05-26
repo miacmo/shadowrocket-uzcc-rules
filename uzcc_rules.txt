@@ -3,5 +3,5 @@ DOMAIN-SUFFIX,bing.com,DIRECT
 DOMAIN-SUFFIX,bing.net,DIRECT
 
 # AI 分流规则集
-# 该规则集由 merge_rules.py 从 OverseasAI.list 拉取并过滤生成
+# 该规则集由 merge_rules.py 从 OverseasAI.list 拉取，并按白名单提取生成
 RULE-SET,https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/ai_rule_set.list,AI
