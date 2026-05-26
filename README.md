@@ -1,0 +1,1 @@
+# shadowrocket-uzcc-rules
