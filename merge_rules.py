@@ -14,8 +14,10 @@ CUSTOM_PROXY_GROUP = """
 # AI 分流入口，优先使用命名为“台湾-”的节点，其余地区可手动选择
 AI = select,AI-优先,AI-台湾,AI-香港,AI-新加坡,AI-日本,AI-美国,AI-其他,Proxy,DIRECT
 
-# 按节点名称自动归类，排除订阅信息类节点
+# 优先入口：只收录“台湾-”这类节点
 AI-优先 = select,policy-regex-filter=^(?=.*(台湾-|台灣-|TW-|Taiwan-|🇹🇼-))(?!.*(剩余|流量|到期|套餐)).*$
+
+# 地区入口：按节点名称自动归类，排除订阅信息类节点
 AI-台湾 = select,policy-regex-filter=^(?=.*(台湾|台灣|TW|Taiwan|🇹🇼))(?!.*(剩余|流量|到期|套餐)).*$
 AI-香港 = select,policy-regex-filter=^(?=.*(香港|HK|Hong Kong|🇭🇰))(?!.*(剩余|流量|到期|套餐)).*$
 AI-新加坡 = select,policy-regex-filter=^(?=.*(新加坡|狮城|SG|Singapore|🇸🇬))(?!.*(剩余|流量|到期|套餐)).*$
