@@ -24,7 +24,7 @@ GitHub Actions 每天北京时间 10:00 自动执行以下步骤：
 4. 将自定义规则插入到原作者规则 `[Rule]` 段之前；
 5. 生成并提交 `sr_cnip_ai_routing.conf`。
 
-这样既能跟随原作者规则更新，又无需在每次更新订阅后手动改配置。也可在仓库中手动触发：`Actions → Update Shadowrocket Rules → Run workflow`。
+这样既能跟随原作者规则更新，又无需在每次更新订阅后手动改配置。
 
 ## 分流逻辑
 
