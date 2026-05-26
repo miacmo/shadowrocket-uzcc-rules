@@ -1,6 +1,7 @@
 # shadowrocket-uzcc-rules
 
 本仓库用于维护适用于 Shadowrocket 的个人分流配置，包含完整规则版与香港网络轻量版两个配置入口，主要用于 AI 服务分流、规则订阅管理和配置自动更新。
+
 仓库目前提供两个配置入口：
 
 1. **完整规则版：`sr_cnip_ai_routing.conf`**  
