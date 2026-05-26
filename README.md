@@ -1,8 +1,8 @@
 # shadowrocket-uzcc-rules
 
-在 [Johnshall](https://github.com/Johnshall) 的 Shadowrocket 分流规则基础上，叠加一层面向海外 AI 服务的自定义分流，自动生成可供 Shadowrocket 订阅的配置文件。
+在 [Johnshall](https://github.com/Johnshall) 的 Shadowrocket 分流规则基础上，叠加一层 AI 分流，自动生成可供订阅的配置文件。
 
-核心功能是 **AI 分流**：把部分常用海外 AI 服务单独归入 `AI` 分组，再按地区节点选择出口；同时完整保留原作者 `sr_cnip` 规则的持续更新能力。
+核心是把常用海外 AI 服务单独归入 `AI` 分组，再按地区节点选择出口；原作者 `sr_cnip` 规则则完整保留、持续更新。
 
 ## 使用方式
 
@@ -24,18 +24,19 @@ GitHub Actions 每天北京时间 10:00 自动执行以下步骤：
 4. 将自定义规则插入到原作者规则 `[Rule]` 段之前；
 5. 生成并提交 `sr_cnip_ai_routing.conf`。
 
-跟随原作者规则更新，无需在每次更新订阅后手动改配置。
+如此一来，配置既能跟随原作者规则更新，又无需每次订阅后手动改动。
 
 ## 分流逻辑
 
 | 流量 | 走向 |
 | --- | --- |
-| 指定海外 AI 服务 | `AI` → 地区分组 → 具体节点 |
+| OpenAI / ChatGPT / Claude / Anthropic / Perplexity / Poe / Grok 等常用海外 AI | `AI` → 地区分组 → 具体节点 |
 | Bing | 强制直连（DIRECT） |
-| Gemini、Google 系服务、Microsoft Copilot、Canva、中国 AI 服务 | 维持原作者规则 |
+| Microsoft Copilot / 微软 AI | 强制直连（DIRECT） |
+| Gemini、Google 系服务、Canva、中国 AI 服务 | 维持原作者规则 |
 | 其余国内外网站 | 维持原作者规则 |
 
-也就是说，本仓库只额外接管「指定海外 AI 服务」和「Bing」，其他一律不覆盖，沿用原作者规则。
+也就是说，本仓库只额外接管「指定海外 AI 服务」「Bing」和「Microsoft Copilot / 微软 AI」，其他流量不覆盖，沿用原作者规则。
 
 ## 地区分组
 
@@ -62,7 +63,7 @@ AI-台湾 / AI-香港 / AI-新加坡 / AI-日本 / AI-美国 / AI-其他
 | `.github/workflows/update.yml` | GitHub Actions 自动更新配置（每天北京时间 10:00） |
 | `sr_cnip_ai_routing.conf` | 自动生成、供 Shadowrocket 实际订阅的配置文件 |
 
-## 原规则来源与协议
+## 基础规则来源与协议
 
 本项目基于 [Johnshall](https://github.com/Johnshall) 维护的 Shadowrocket 分流规则进行二次合并，感谢原作者长期维护：
 
@@ -70,6 +71,24 @@ AI-台湾 / AI-香港 / AI-新加坡 / AI-日本 / AI-美国 / AI-其他
 - 原规则：<https://johnshall.github.io/Shadowrocket-ADBlock-Rules-Forever/sr_cnip.conf>
 
 原作者规则采用 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) 协议。本仓库在其基础上合并自定义 AI 分流规则，对涉及原规则的部分遵循原协议要求；本仓库公开分发的衍生配置同样以 **CC BY-SA 4.0** 协议授权。
+
+## AI 规则来源
+
+部分常用 AI 服务直接引用 blackmatrix7 的 Shadowrocket 规则集：
+
+```text
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/OpenAI/OpenAI.list
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Claude/Claude.list
+https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Anthropic/Anthropic.list
+```
+
+blackmatrix7 / ios_rule_script 仓库地址：
+
+```text
+https://github.com/blackmatrix7/ios_rule_script
+```
+
+上述规则集仅以远程引用方式使用，本仓库不复制、修改或再分发其内容，授权请以原仓库为准。
 
 ## 注意事项
 
