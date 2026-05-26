@@ -1,6 +1,6 @@
 # shadowrocket-uzcc-rules
 
-在 Johnshall 的 Shadowrocket 分流规则基础上，叠加一层面向海外 AI 服务的自定义分流，自动生成可供 Shadowrocket 订阅的配置文件。
+在 [Johnshall](https://github.com/Johnshall) 的 Shadowrocket 分流规则基础上，叠加一层面向海外 AI 服务的自定义分流，自动生成可供 Shadowrocket 订阅的配置文件。
 
 本仓库的重点是 **AI 分流**：在保留原作者 `sr_cnip` 规则持续更新的前提下，把部分常用海外 AI 服务单独分流到 `AI` 分组，再由用户按地区节点选择出口。
 
