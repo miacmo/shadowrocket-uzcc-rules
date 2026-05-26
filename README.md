@@ -31,8 +31,7 @@ GitHub Actions 每天北京时间 10:00 自动执行以下步骤：
 | 流量 | 走向 |
 | --- | --- |
 | OpenAI / ChatGPT / Claude / Anthropic / Perplexity / Poe / Grok 等常用海外 AI | `AI` → 地区分组 → 具体节点 |
-| Bing | 强制直连（DIRECT） |
-| Microsoft Copilot / 微软 AI | 强制直连（DIRECT） |
+| Bing / Microsoft Copilot / 微软 AI| 强制直连（DIRECT） |
 | Gemini、Google 系服务、Canva、中国 AI 服务 | 维持原作者规则 |
 | 其余国内外网站 | 维持原作者规则 |
 
