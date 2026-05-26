@@ -35,7 +35,7 @@ GitHub Actions 每天北京时间 10:00 自动执行以下步骤：
 | Gemini、Google 系服务、Canva、中国 AI 服务 | 维持原作者规则 |
 | 其余国内外网站 | 维持原作者规则 |
 
-也就是说，本仓库只额外接管「指定海外 AI 服务」「Bing」和「Microsoft Copilot / 微软 AI」，其他流量不覆盖，沿用原作者规则。
+也就是说，本仓库只额外接管「指定海外 AI 服务」和「Bing / Microsoft Copilot / 微软 AI」，其他流量不覆盖，沿用原作者规则。
 
 ## 地区分组
 
