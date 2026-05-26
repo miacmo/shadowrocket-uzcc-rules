@@ -5,7 +5,7 @@
 仓库目前提供两个配置入口：
 
 1. **完整规则版：`sr_cnip_ai_routing.conf`**  
-   基于 Johnshall / Shadowrocket-ADBlock-Rules-Forever 的 `sr_cnip.conf` 生成，并叠加自定义 AI 分流规则。适合需要完整国内外分流、CNIP 规则和自动更新能力的用户。
+   基于 [Johnshall / Shadowrocket-ADBlock-Rules-Forever](https://github.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever) 的 [`sr_cnip.conf`](https://johnshall.github.io/Shadowrocket-ADBlock-Rules-Forever/sr_cnip.conf) 生成，并叠加自定义 AI 分流规则。适合需要完整国内外分流、CNIP 规则和自动更新能力的用户。
 
 2. **香港网络轻量版：`sr_ai_proxy_hk.conf`**  
    面向香港 SIM、香港 eSIM、香港手机卡或香港本地网络环境。核心逻辑是 AI 服务走代理，Google、Microsoft 和其他流量直连。
@@ -89,12 +89,12 @@ https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/sr_ai_prox
 
 本仓库可能引用或基于以下项目：
 
-- Johnshall / Shadowrocket-ADBlock-Rules-Forever
-- blackmatrix7 / ios_rule_script
+- [Johnshall / Shadowrocket-ADBlock-Rules-Forever](https://github.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever)
+- [blackmatrix7 / ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)
 
-其中，完整规则版基于 Johnshall 的 Shadowrocket 规则生成；部分 AI 规则可能通过远程 `RULE-SET` 引用 blackmatrix7 / ios_rule_script。本仓库不会将 blackmatrix7 的远程规则文件复制、合并或重新分发到仓库内，相关规则内容仍以原项目许可证为准。
+其中，完整规则版基于 [Johnshall / Shadowrocket-ADBlock-Rules-Forever](https://github.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever) 的 Shadowrocket 规则生成；部分 AI 规则可能通过远程 `RULE-SET` 引用 [blackmatrix7 / ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)。本仓库不会将 blackmatrix7 的远程规则文件复制、合并或重新分发到仓库内，相关规则内容仍以原项目许可证为准。
 
-详细说明见 `NOTICE.md`。
+详细说明见 [`NOTICE.md`](NOTICE.md)。
 
 ## 许可证
 
