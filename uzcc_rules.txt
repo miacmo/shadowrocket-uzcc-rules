@@ -33,10 +33,6 @@ DOMAIN-SUFFIX,groq.com,AI
 # Mistral
 DOMAIN-SUFFIX,mistral.ai,AI
 
-# DeepSeek
-DOMAIN-SUFFIX,deepseek.com,AI
-DOMAIN-SUFFIX,deepseek.ai,AI
-
 # Character AI
 DOMAIN-SUFFIX,character.ai,AI
 DOMAIN-SUFFIX,characterai.io,AI
