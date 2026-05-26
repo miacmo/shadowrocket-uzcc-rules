@@ -47,8 +47,7 @@ https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/sr_ai_prox
 | 使用需求 | 推荐配置 |
 |---|---|
 | 想使用完整国内外分流、CNIP 规则和较完整的基础规则 | `sr_cnip_ai_routing.conf` |
-| 想跟随上游规则自动更新 | `sr_cnip_ai_routing.conf` |
-| 使用香港手机卡，只想让 AI 服务走代理 | `sr_ai_proxy_hk.conf` |
+| 处于香港网络，只想让 AI 服务走代理 | `sr_ai_proxy_hk.conf` |
 | 不想使用复杂规则，只想保留轻量 AI 分流 | `sr_ai_proxy_hk.conf` |
 
 ## 仓库文件说明
