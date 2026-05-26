@@ -19,6 +19,17 @@ distributed by this repository, are licensed under the same CC BY-SA 4.0 license
 
 -------------------------------------------------------------------------------
 
+This repository references external rule-set URLs from:
+
+  blackmatrix7 / ios_rule_script
+  https://github.com/blackmatrix7/ios_rule_script
+
+Those external rule sets are referenced remotely only. They are not copied,
+modified, or redistributed in this repository. Please refer to the original
+repository for its license and terms.
+
+-------------------------------------------------------------------------------
+
 You are free to:
 
   Share — copy and redistribute the material in any medium or format.
@@ -29,9 +40,11 @@ Under the following terms:
 
   Attribution — You must give appropriate credit, provide a link to the license,
                 and indicate if changes were made.
+
   ShareAlike — If you remix, transform, or build upon the material, you must
                distribute your contributions under the same license as the
                original.
+
   No additional restrictions — You may not apply legal terms or technological
                 measures that legally restrict others from doing anything the
                 license permits.
