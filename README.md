@@ -1,95 +1,114 @@
 # shadowrocket-uzcc-rules
 
-在 [Johnshall](https://github.com/Johnshall) 的 Shadowrocket 分流规则基础上，叠加一层 AI 分流，自动生成可供订阅的配置文件。
+本仓库用于维护适用于 Shadowrocket 的个人分流配置，合并原 `shadowrocket-uzcc-rules` 与 `shadowrocket-ai-proxy-hk` 两个项目。
 
-核心是把常用海外 AI 服务单独归入 `AI` 分组，再按地区节点选择出口；原作者 `sr_cnip` 规则则完整保留、持续更新。
+仓库目前提供两个配置入口：
 
-## 使用方式
+1. **完整规则版：`sr_cnip_ai_routing.conf`**  
+   基于 Johnshall / Shadowrocket-ADBlock-Rules-Forever 的 `sr_cnip.conf` 生成，并叠加自定义 AI 分流规则。适合需要完整国内外分流、CNIP 规则和自动更新能力的用户。
 
-在 Shadowrocket 中添加配置订阅，填入：
+2. **香港网络轻量版：`sr_ai_proxy_hk.conf`**  
+   面向香港 SIM、香港 eSIM、香港手机卡或香港本地网络环境。核心逻辑是 AI 服务走代理，Google、Microsoft 和其他流量直连。
+
+## 配置订阅地址
+
+### 1. 完整规则版
 
 ```text
 https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/sr_cnip_ai_routing.conf
 ```
 
-添加后更新配置即可。
+适合需要完整规则的用户。
+
+主要逻辑：
+
+- 保留上游 `sr_cnip.conf` 的基础分流结构
+- 叠加自定义 AI 分流规则
+- 支持 GitHub Actions 自动更新
+- 适合长期作为主配置使用
+
+### 2. 香港网络轻量版
+
+```text
+https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/sr_ai_proxy_hk.conf
+```
+
+适合使用香港 SIM、香港 eSIM、香港手机卡或香港本地网络的用户。
+
+主要逻辑：
+
+- AI 服务走代理
+- Google 系服务直连
+- Microsoft 系服务直连
+- 其他流量默认直连
+
+## 两个版本怎么选
+
+| 使用需求 | 推荐配置 |
+|---|---|
+| 想使用完整国内外分流、CNIP 规则和较完整的基础规则 | `sr_cnip_ai_routing.conf` |
+| 想跟随上游规则自动更新 | `sr_cnip_ai_routing.conf` |
+| 使用香港手机卡，只想让 AI 服务走代理 | `sr_ai_proxy_hk.conf` |
+| 不想使用复杂规则，只想保留轻量 AI 分流 | `sr_ai_proxy_hk.conf` |
+
+## 仓库文件说明
+
+| 文件 | 说明 |
+|---|---|
+| `sr_cnip_ai_routing.conf` | 完整规则版 Shadowrocket 配置 |
+| `sr_ai_proxy_hk.conf` | 香港网络轻量版 Shadowrocket 配置 |
+| `uzcc_rules.txt` | 自定义 AI 分流规则 |
+| `merge_rules.py` | 自动拉取并合并规则的脚本 |
+| `.github/workflows/update.yml` | GitHub Actions 自动更新配置 |
+| `README.md` | 项目说明 |
+| `NOTICE.md` | 第三方项目引用和授权说明 |
+| `LICENSE` | 本仓库许可证 |
+
+## 使用方法
+
+1. 打开 Shadowrocket。
+2. 进入「配置」。
+3. 点击右上角「+」。
+4. 类型选择「配置」。
+5. 粘贴上方 Raw 订阅地址。
+6. 下载并启用配置。
+7. 根据实际情况选择对应的代理策略或节点。
 
 ## 工作原理
 
-GitHub Actions 每天北京时间 10:00 自动执行以下步骤：
+完整规则版通过自动合并脚本完成以下操作：
 
-1. 拉取原作者最新规则；
-2. 读取本仓库的 `uzcc_rules.txt`；
-3. 插入自定义代理分组；
-4. 将自定义规则插入到原作者规则 `[Rule]` 段之前；
-5. 生成并提交 `sr_cnip_ai_routing.conf`。
+1. 拉取上游 `sr_cnip.conf`。
+2. 读取本仓库的 `uzcc_rules.txt`。
+3. 将自定义 AI 规则插入到 Shadowrocket 配置中。
+4. 生成最终的 `sr_cnip_ai_routing.conf`。
+5. 通过 GitHub Actions 定期更新。
 
-如此一来，配置既能跟随原作者规则更新，又无需每次订阅后手动改动。
+香港网络轻量版为独立维护的配置文件，不依赖自动合并脚本。
 
-## 分流逻辑
+## 第三方项目引用
 
-| 流量 | 走向 |
-| --- | --- |
-| OpenAI / ChatGPT / Claude / Anthropic / Perplexity / Poe / Grok 等常用海外 AI | `AI` → 地区分组 → 具体节点 |
-| Bing / Microsoft Copilot / 微软 AI | 强制直连（DIRECT） |
-| Google 系服务、中国 AI 服务、其余国内外网站 | 维持原作者规则 |
+本仓库可能引用或基于以下项目：
 
-也就是说，本仓库只额外接管「指定海外 AI 服务」和「Bing / Microsoft Copilot / 微软 AI」，其他流量不覆盖，沿用原作者规则。
+- Johnshall / Shadowrocket-ADBlock-Rules-Forever
+- blackmatrix7 / ios_rule_script
 
-## 地区分组
+其中，完整规则版基于 Johnshall 的 Shadowrocket 规则生成；部分 AI 规则可能通过远程 `RULE-SET` 引用 blackmatrix7 / ios_rule_script。本仓库不会将 blackmatrix7 的远程规则文件复制、合并或重新分发到仓库内，相关规则内容仍以原项目许可证为准。
 
-`AI` 分组下按出口地区进一步划分：
+详细说明见 `NOTICE.md`。
 
-```text
-AI-台湾 / AI-香港 / AI-新加坡 / AI-日本 / AI-美国 / AI-其他
-```
+## 许可证
 
-各分组根据节点名称中的关键词自动匹配，例如含 `台湾 / TW / Taiwan` 的节点进入 `AI-台湾`，含 `香港 / HK / Hong Kong` 的进入 `AI-香港`。未命中上述五个地区关键词的节点归入 `AI-其他`。
+本仓库整体采用 **Creative Commons Attribution-ShareAlike 4.0 International License（CC BY-SA 4.0）**。
 
-为避免订阅信息类节点混入分组，名称中含以下关键词的项目会被排除：
+选择该许可证的原因是：完整规则版属于基于上游 Shadowrocket 规则的二次整理与再发布，为保持授权口径一致，本仓库统一采用 CC BY-SA 4.0。
 
-```text
-剩余 / 流量 / 到期 / 套餐
-```
-
-## 文件说明
-
-| 文件 | 作用 |
-| --- | --- |
-| `merge_rules.py` | 拉取原作者规则，并合并自定义代理分组和自定义规则 |
-| `uzcc_rules.txt` | 自定义规则本体，只写规则、无需 `[Rule]` 段 |
-| `.github/workflows/update.yml` | GitHub Actions 自动更新配置（每天北京时间 10:00） |
-| `sr_cnip_ai_routing.conf` | 自动生成、供 Shadowrocket 实际订阅的配置文件 |
-
-## 基础规则来源与协议
-
-本项目基于 [Johnshall](https://github.com/Johnshall) 维护的 Shadowrocket 分流规则进行二次合并，感谢原作者长期维护：
-
-- 原项目：<https://github.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever>
-- 原规则：<https://johnshall.github.io/Shadowrocket-ADBlock-Rules-Forever/sr_cnip.conf>
-
-原作者规则采用 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) 协议。本仓库在其基础上合并自定义 AI 分流规则，对涉及原规则的部分遵循原协议要求；本仓库公开分发的衍生配置同样以 **CC BY-SA 4.0** 协议授权。
-
-## AI 规则来源
-
-部分常用 AI 服务直接引用 blackmatrix7 的 Shadowrocket 规则集：
-
-```text
-https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/OpenAI/OpenAI.list
-https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Claude/Claude.list
-https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Anthropic/Anthropic.list
-```
-
-blackmatrix7 / ios_rule_script 仓库地址：
-
-```text
-https://github.com/blackmatrix7/ios_rule_script
-```
-
-上述规则集仅以远程引用方式使用，本仓库不复制、修改或再分发其内容，授权请以原仓库为准。
+使用、修改或再发布本仓库内容时，请保留原作者与本仓库的署名，并以相同许可证继续分享。
 
 ## 注意事项
 
-- 本仓库仅用于个人学习和自用配置管理，仅在原作者规则基础上做个人化合并与补充，不声明对原规则内容的所有权。
-- 本仓库不应提交任何节点链接、订阅链接、UUID、密码、Token 等敏感信息。
-- 若原作者规则结构发生重大变化，合并脚本可能需要相应调整。
+- 本仓库不包含任何代理节点、机场订阅、UUID、密码、Token 或账号信息。
+- 本仓库仅提供 Shadowrocket 配置和分流规则，不提供网络服务。
+- 配置中的策略组名称需要与 Shadowrocket 中实际存在的策略组或代理策略相匹配。
+- 若上游规则结构发生变化，自动合并脚本可能需要调整。
+- 使用者应自行确认所在地法律法规、网络服务商规则和相关平台服务条款。
