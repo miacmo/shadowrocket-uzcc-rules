@@ -62,15 +62,17 @@ AI-台湾 / AI-香港 / AI-新加坡 / AI-日本 / AI-美国 / AI-其他
 | `.github/workflows/update.yml` | GitHub Actions 自动更新配置（每天北京时间 10:00） |
 | `sr_cnip_ai_routing.conf` | 自动生成、供 Shadowrocket 实际订阅的配置文件 |
 
-## 原规则来源
+## 原规则来源与协议
 
-本项目基于 Johnshall 的规则二次合并，感谢原作者长期维护：
+本项目基于 [Johnshall](https://github.com/Johnshall) 维护的 Shadowrocket 分流规则进行二次合并，感谢原作者长期维护：
 
 - 原项目：<https://github.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever>
 - 原规则：<https://johnshall.github.io/Shadowrocket-ADBlock-Rules-Forever/sr_cnip.conf>
 
+原作者规则采用 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) 协议。本仓库在其基础上合并自定义 AI 分流规则，对涉及原规则的部分遵循原协议要求；本仓库公开分发的衍生配置同样以 **CC BY-SA 4.0** 协议授权。
+
 ## 注意事项
 
-- 本仓库仅用于个人学习和自用配置管理，不对原规则内容主张所有权；原规则的维护、更新与版权均归原作者所有。
+- 本仓库仅用于个人学习和自用配置管理，仅在原作者规则基础上做个人化合并与补充，不声明对原规则内容的所有权。
 - 本仓库不应提交任何节点链接、订阅链接、UUID、密码、Token 等敏感信息。
 - 若原作者规则结构发生重大变化，合并脚本可能需要相应调整。
