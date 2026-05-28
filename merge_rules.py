@@ -38,20 +38,22 @@ def fetch_upstream(url: str) -> str:
         return response.read().decode("utf-8")
 
 
-def ensure_prefer_ipv6_false(config: str) -> str:
+def normalize_ipv6_settings(config: str) -> str:
     """
-    Remove `prefer-ipv4 = true` and ensure `prefer-ipv6 = false`
-    is present in the [General] section.
+    Keep IPv6-related settings together in the [General] section.
 
-    This function is idempotent. It is safe to run on every scheduled update.
+    Behavior:
+    1. Remove existing prefer-ipv4 and prefer-ipv6 preference lines.
+    2. Insert `prefer-ipv6 = false` immediately after the existing `ipv6 = ...` line.
+    3. If the upstream [General] section has no `ipv6 = ...` line, insert
+       `prefer-ipv6 = false` right after [General].
     """
-    lines = [
-        line for line in config.splitlines()
-        if line.strip().lower() != "prefer-ipv4 = true"
-    ]
-
-    if any(line.strip().lower() == "prefer-ipv6 = false" for line in lines):
-        return "\n".join(lines) + "\n"
+    lines = []
+    for line in config.splitlines():
+        stripped = line.strip().lower()
+        if stripped in {"prefer-ipv4 = true", "prefer-ipv4 = false", "prefer-ipv6 = true", "prefer-ipv6 = false"}:
+            continue
+        lines.append(line)
 
     general_index = None
     for index, line in enumerate(lines):
@@ -65,14 +67,14 @@ def ensure_prefer_ipv6_false(config: str) -> str:
     insert_index = general_index + 1
 
     for index in range(general_index + 1, len(lines)):
-        stripped = lines[index].strip()
+        stripped = lines[index].strip().lower()
 
         if stripped.startswith("[") and stripped.endswith("]"):
             break
 
         insert_index = index + 1
 
-        if stripped.lower() == "ipv6 = true":
+        if stripped in {"ipv6 = true", "ipv6 = false"}:
             lines.insert(index + 1, "prefer-ipv6 = false")
             return "\n".join(lines) + "\n"
 
@@ -140,7 +142,7 @@ def main() -> None:
         raise FileNotFoundError(f"Custom rules file not found: {CUSTOM_RULES_FILE}")
 
     upstream = fetch_upstream(UPSTREAM_URL)
-    upstream = ensure_prefer_ipv6_false(upstream)
+    upstream = normalize_ipv6_settings(upstream)
 
     custom_rules = CUSTOM_RULES_FILE.read_text(encoding="utf-8")
 
