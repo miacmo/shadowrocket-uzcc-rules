@@ -38,6 +38,50 @@ def fetch_upstream(url: str) -> str:
         return response.read().decode("utf-8")
 
 
+def ensure_prefer_ipv4(config: str) -> str:
+    """
+    Ensure the generated Shadowrocket configuration prefers IPv4.
+
+    The line must be inserted into the [General] section. This function avoids
+    duplicate insertion, so it is safe to run every time GitHub Actions updates
+    the generated configuration.
+    """
+    if "prefer-ipv4 = true" in config:
+        return config
+
+    general_marker = "[General]"
+    if general_marker not in config:
+        raise ValueError("Missing [General] section in upstream configuration.")
+
+    lines = config.splitlines()
+    general_index = None
+
+    for index, line in enumerate(lines):
+        if line.strip() == general_marker:
+            general_index = index
+            break
+
+    if general_index is None:
+        raise ValueError("Missing [General] section in upstream configuration.")
+
+    # Prefer placing it after ipv6 = true when that line exists in [General].
+    insert_index = general_index + 1
+    for index in range(general_index + 1, len(lines)):
+        stripped = lines[index].strip()
+
+        if stripped.startswith("[") and stripped.endswith("]"):
+            break
+
+        insert_index = index + 1
+        if stripped.lower() == "ipv6 = true":
+            lines.insert(index + 1, "prefer-ipv4 = true")
+            return "\n".join(lines) + "\n"
+
+    # Fallback: insert near the end of [General].
+    lines.insert(insert_index, "prefer-ipv4 = true")
+    return "\n".join(lines) + "\n"
+
+
 def insert_proxy_group(upstream: str) -> str:
     marker = "[Rule]"
     if marker not in upstream:
@@ -98,6 +142,8 @@ def main() -> None:
         raise FileNotFoundError(f"Custom rules file not found: {CUSTOM_RULES_FILE}")
 
     upstream = fetch_upstream(UPSTREAM_URL)
+    upstream = ensure_prefer_ipv4(upstream)
+
     custom_rules = CUSTOM_RULES_FILE.read_text(encoding="utf-8")
 
     upstream_with_group = insert_proxy_group(upstream)
