@@ -38,34 +38,32 @@ def fetch_upstream(url: str) -> str:
         return response.read().decode("utf-8")
 
 
-def ensure_prefer_ipv4(config: str) -> str:
+def ensure_prefer_ipv6_false(config: str) -> str:
     """
-    Ensure the generated Shadowrocket configuration prefers IPv4.
+    Remove `prefer-ipv4 = true` and ensure `prefer-ipv6 = false`
+    is present in the [General] section.
 
-    The line must be inserted into the [General] section. This function avoids
-    duplicate insertion, so it is safe to run every time GitHub Actions updates
-    the generated configuration.
+    This function is idempotent. It is safe to run on every scheduled update.
     """
-    if "prefer-ipv4 = true" in config:
-        return config
+    lines = [
+        line for line in config.splitlines()
+        if line.strip().lower() != "prefer-ipv4 = true"
+    ]
 
-    general_marker = "[General]"
-    if general_marker not in config:
-        raise ValueError("Missing [General] section in upstream configuration.")
+    if any(line.strip().lower() == "prefer-ipv6 = false" for line in lines):
+        return "\n".join(lines) + "\n"
 
-    lines = config.splitlines()
     general_index = None
-
     for index, line in enumerate(lines):
-        if line.strip() == general_marker:
+        if line.strip() == "[General]":
             general_index = index
             break
 
     if general_index is None:
         raise ValueError("Missing [General] section in upstream configuration.")
 
-    # Prefer placing it after ipv6 = true when that line exists in [General].
     insert_index = general_index + 1
+
     for index in range(general_index + 1, len(lines)):
         stripped = lines[index].strip()
 
@@ -73,12 +71,12 @@ def ensure_prefer_ipv4(config: str) -> str:
             break
 
         insert_index = index + 1
+
         if stripped.lower() == "ipv6 = true":
-            lines.insert(index + 1, "prefer-ipv4 = true")
+            lines.insert(index + 1, "prefer-ipv6 = false")
             return "\n".join(lines) + "\n"
 
-    # Fallback: insert near the end of [General].
-    lines.insert(insert_index, "prefer-ipv4 = true")
+    lines.insert(insert_index, "prefer-ipv6 = false")
     return "\n".join(lines) + "\n"
 
 
@@ -142,7 +140,7 @@ def main() -> None:
         raise FileNotFoundError(f"Custom rules file not found: {CUSTOM_RULES_FILE}")
 
     upstream = fetch_upstream(UPSTREAM_URL)
-    upstream = ensure_prefer_ipv4(upstream)
+    upstream = ensure_prefer_ipv6_false(upstream)
 
     custom_rules = CUSTOM_RULES_FILE.read_text(encoding="utf-8")
 
@@ -150,7 +148,6 @@ def main() -> None:
     merged = insert_custom_rules(upstream_with_group, custom_rules)
 
     OUTPUT_FILE.write_text(merged, encoding="utf-8")
-
     print(f"Generated {OUTPUT_FILE}")
 
 
