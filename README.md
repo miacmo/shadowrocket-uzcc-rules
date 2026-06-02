@@ -37,10 +37,18 @@ https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/sr_ai_prox
 - **AI 独立分流**：OpenAI、Claude、Anthropic、Sora、Perplexity、Poe、Grok 等服务走 `AI` 策略组。
 - **AI 节点自动归类**：按节点名称自动生成台湾、香港、新加坡、日本、美国等分组；`AI-优先` 只收录 `台湾- / 台灣- / TW- / Taiwan- / 🇹🇼-` 这类标准前缀节点。
 - **默认代理出口可选**：`AI` 组内保留 `PROXY`，表示跟随 Shadowrocket 当前默认代理出口；也可手动选择地区组或 `DIRECT`。
-- **微信直连修复**：通过 WeChat 规则集让微信相关域名直连，并对微信/腾讯图片、头像、小程序、支付等资源域名注入 `always-real-ip`，降低 fake-ip 场景下图片白图或资源加载失败的概率。
+- **微信直连修复**：通过微信核心显式直连兜底规则 + WeChat 规则集让微信相关域名直连，并对微信/腾讯图片、头像、小程序、支付等资源域名注入 `always-real-ip`，降低 fake-ip 场景下公众号文章打不开、图片白图或资源加载失败的概率。
 - **fake-ip 中继修正**：自动从上游 `bypass-tun` 中移除 `198.18.0.0/15`，避免 fake-ip 地址绕过 TUN 导致映射失效。
-- **IPv6 策略保持上游逻辑**：不额外关闭 IPv6；如上游配置为 `ipv6 = true`、`prefer-ipv6 = false`，表示接管 IPv6 但不优先使用 IPv6 回源。
-- **DNS 不做激进修改**：不强行改为境外 DNS，也不添加 ChinaMax；优先保持通用稳定性。
+- **IPv6 策略固定修正**：生成时强制写入 `ipv6 = true` 与 `prefer-ipv6 = false`，表示接管 IPv6、防止公网 IPv6 绕过 TUN，同时不优先使用 IPv6 回源。
+- **DNS 不做激进修改**：不强行改为境外 DNS，不添加 ChinaMax，也不启用 `dns-direct-system = true`；优先保持通用稳定性。
+- **局部关闭微信 fake-ip**：只通过 `always-real-ip` 处理微信/腾讯相关域名，避免把所有 DIRECT 域名都改成本地真实 IP 解析。
+
+
+## 微信本地兜底范围
+
+完整规则版在 `uzcc_rules.txt` 中显式加入微信核心直连兜底，覆盖微信公众号、图片、头像、小程序、支付和常见腾讯 CDN 域名；同时 `merge_rules.py` 会把同一批核心域名注入 `always-real-ip`，让这些域名返回真实 IP，降低 fake-ip 场景下公众号文章打不开、图片白图、头像或小程序资源加载失败的概率。
+
+注意：这不是全局关闭 fake-ip，也没有启用 `dns-direct-system = true`。处理范围只限微信/腾讯相关核心域名，AI 和其他代理流量仍按原有 `AI / PROXY` 逻辑处理。
 
 ## 文件说明
 
@@ -70,6 +78,8 @@ https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/sr_ai_prox
 - 仓库不含任何节点、订阅、UUID、密码、Token 或账号信息，也不提供网络服务。
 - 完整规则版中的 `PROXY` 使用 Shadowrocket 的默认代理出口语义；AI 组选择 `PROXY` 时会跟随当前默认代理节点。
 - `always-real-ip` 只针对微信/腾讯相关域名，不是全局关闭 fake-ip。
+- 当前主配置不启用 `dns-direct-system = true`。该项影响所有直连域名的 DNS 处理，改动范围过大，容易造成 CDN 调度或 App 解析行为变化，因此不作为默认方案。
+- 微信核心链路增加显式 DIRECT 兜底规则，覆盖公众号、图片、头像、小程序、支付和常见腾讯 CDN 域名，例如 `mp.weixin.qq.com`、`res.wx.qq.com`、`mmbiz.qpic.cn`、`mmbiz.qlogo.cn`、`wxapp.tc.qq.com`、`vweixinthumb.tc.qq.com`、`tenpay.com` 等，避免远程 WeChat 规则集未加载时走错出口。
 - 配置里的自定义策略组由完整规则版自动注入；如自行改名，请同步修改规则里的策略名。
 - 上游规则结构若变动，合并脚本可能需要相应调整。
 - 请自行确认所在地法律法规及相关平台条款。
