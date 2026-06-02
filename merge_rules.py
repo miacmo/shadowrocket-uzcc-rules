@@ -44,9 +44,15 @@ def normalize_ipv6_settings(config: str) -> str:
 
     Behavior:
     1. Remove existing prefer-ipv4 and prefer-ipv6 preference lines.
-    2. Insert `prefer-ipv6 = false` immediately after the existing `ipv6 = ...` line.
-    3. If the upstream [General] section has no `ipv6 = ...` line, insert
-       `prefer-ipv6 = false` right after [General].
+    2. Force `ipv6 = true` so Shadowrocket TAKES OVER IPv6 traffic (instead of
+       letting it leak out of the TUN onto the host's native IPv6 path), and
+       insert `prefer-ipv6 = false` right after it. Combined with the
+       `IP-CIDR6,::/0,REJECT,no-resolve` rule in uzcc_rules.txt, every IPv6
+       target is rejected fast so apps fall back to IPv4 — this fixes services
+       with AAAA records (e.g. Tencent Cloud) failing over a half-broken
+       native IPv6 link.
+    3. If the upstream [General] section has no `ipv6 = ...` line, insert both
+       `ipv6 = true` and `prefer-ipv6 = false` right after [General].
     """
     lines = []
     for line in config.splitlines():
@@ -75,10 +81,12 @@ def normalize_ipv6_settings(config: str) -> str:
         insert_index = index + 1
 
         if stripped in {"ipv6 = true", "ipv6 = false"}:
+            lines[index] = "ipv6 = true"
             lines.insert(index + 1, "prefer-ipv6 = false")
             return "\n".join(lines) + "\n"
 
-    lines.insert(insert_index, "prefer-ipv6 = false")
+    lines.insert(insert_index, "ipv6 = true")
+    lines.insert(insert_index + 1, "prefer-ipv6 = false")
     return "\n".join(lines) + "\n"
 
 
