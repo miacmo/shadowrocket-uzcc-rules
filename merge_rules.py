@@ -38,6 +38,95 @@ def fetch_upstream(url: str) -> str:
         return response.read().decode("utf-8")
 
 
+WECHAT_ALWAYS_REAL_IP = [
+    "*.qq.com",
+    "*.wechat.com",
+    "*.weixin.qq.com",
+    "*.wx.qq.com",
+    "*.servicewechat.com",
+    "*.qpic.cn",
+    "*.qlogo.cn",
+    "*.gtimg.com",
+    "*.gtimg.cn",
+    "*.idqqimg.com",
+    "*.tenpay.com",
+    "*.wechatpay.cn",
+    "*.wechatpay.com",
+]
+
+
+def ensure_always_real_ip(config: str) -> str:
+    """
+    给微信/腾讯资源域名启用 always-real-ip，让这些域名返回真实 IP，
+    避免 fake-ip 在微信图片、头像、小程序 CDN 场景下触发白图问题。
+
+    注意：这里只做微信/腾讯资源的局部修复，不全局关闭 fake-ip，
+    不改变 AI、PROXY、DNS、IPv6 的既有逻辑。
+    """
+    key_name = "always-real-ip"
+    wanted = WECHAT_ALWAYS_REAL_IP
+
+    out = []
+    found = False
+
+    for line in config.splitlines():
+        stripped = line.strip().lower()
+        if stripped.startswith(f"{key_name}"):
+            key, sep, value = line.partition("=")
+            if sep:
+                existing = [item.strip() for item in value.split(",") if item.strip()]
+                merged = existing[:]
+                for item in wanted:
+                    if item not in merged:
+                        merged.append(item)
+                line = f"{key.rstrip()} = " + ", ".join(merged)
+                found = True
+        out.append(line)
+
+    if not found:
+        new_out = []
+        inserted = False
+        for line in out:
+            new_out.append(line)
+            if line.strip().lower().startswith("dns-server"):
+                new_out.append(f"{key_name} = " + ", ".join(wanted))
+                inserted = True
+
+        if not inserted:
+            # 兜底插入到 [General] 内部，避免追加到文件末尾导致 section 错位。
+            general_index = None
+            for index, line in enumerate(new_out):
+                if line.strip() == "[General]":
+                    general_index = index
+                    break
+            if general_index is None:
+                raise ValueError("Missing [General] section in upstream configuration.")
+            new_out.insert(general_index + 1, f"{key_name} = " + ", ".join(wanted))
+
+        out = new_out
+
+    return "\n".join(out) + ("\n" if config.endswith("\n") else "")
+
+
+def strip_fakeip_from_bypass_tun(config: str) -> str:
+    """
+    Remove the fake-ip range (198.18.0.0/15) from the upstream `bypass-tun`
+    line. Shadowrocket hands out fake IPs inside 198.18.x.x, and fake-ip ONLY
+    works if that range is routed THROUGH the TUN. Leaving 198.18.0.0/15 in
+    bypass-tun tells the OS to bypass the TUN for exactly those addresses, which
+    breaks SR's fake-ip -> real-host relay for some destinations (e.g. Tencent).
+    """
+    target = "198.18.0.0/15"
+    out = []
+    for line in config.splitlines():
+        if line.strip().lower().startswith("bypass-tun") and target in line:
+            key, _, value = line.partition("=")
+            cidrs = [c.strip() for c in value.split(",") if c.strip() and c.strip() != target]
+            line = f"{key.rstrip()} = " + ",".join(cidrs)
+        out.append(line)
+    return "\n".join(out) + ("\n" if config.endswith("\n") else "")
+
+
 def insert_proxy_group(upstream: str) -> str:
     marker = "[Rule]"
     if marker not in upstream:
@@ -97,9 +186,9 @@ def main() -> None:
     if not CUSTOM_RULES_FILE.exists():
         raise FileNotFoundError(f"Custom rules file not found: {CUSTOM_RULES_FILE}")
 
-    # 只做两件事：拿上游原版，叠加 AI 分流的分组与规则。
-    # [General] 一律保持上游默认（ipv6=false 等），不再做任何改动。
     upstream = fetch_upstream(UPSTREAM_URL)
+    upstream = strip_fakeip_from_bypass_tun(upstream)
+    upstream = ensure_always_real_ip(upstream)
 
     custom_rules = CUSTOM_RULES_FILE.read_text(encoding="utf-8")
 
