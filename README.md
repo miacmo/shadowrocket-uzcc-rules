@@ -6,10 +6,17 @@
 
 Shadowrocket →「配置」→ 右上角「+」→ 类型选「配置」→ 粘贴地址 → 下载启用 → 选择代理节点。
 
-| 版本 | 地址 |
-| --- | --- |
-| 完整规则版 | `https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/sr_lazy_group_ai.conf` |
-| 香港轻量版 | `https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/sr_ai_proxy_hk.conf` |
+**完整规则版**
+
+```text
+https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/sr_lazy_group_ai.conf
+```
+
+**香港轻量版**
+
+```text
+https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/sr_ai_proxy_hk.conf
+```
 
 ## 版本选择
 
@@ -38,14 +45,14 @@ python3 merge_rules.py
 
 ## 文件说明
 
-| 文件 | 说明 |
-| --- | --- |
-| `sr_lazy_group_ai.conf` | 完整规则版配置 |
-| `sr_ai_proxy_hk.conf` | 香港轻量版配置 |
-| `merge_rules.py` | 拉取并增强完整规则版的脚本 |
-| `.github/workflows/update.yml` | GitHub Actions 自动更新 |
-| `NOTICE.md` | 第三方引用与授权说明 |
-| `LICENSE` | 许可证 |
+| 文件                           | 说明                       |
+| ------------------------------ | -------------------------- |
+| `sr_lazy_group_ai.conf`        | 完整规则版配置             |
+| `sr_ai_proxy_hk.conf`          | 香港轻量版配置             |
+| `merge_rules.py`               | 拉取并增强完整规则版的脚本 |
+| `.github/workflows/update.yml` | GitHub Actions 自动更新    |
+| `NOTICE.md`                    | 第三方引用与授权说明       |
+| `LICENSE`                      | 许可证                     |
 
 ## 许可与引用
 
