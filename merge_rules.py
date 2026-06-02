@@ -8,8 +8,7 @@ import re
 # 1. 新增 优先节点；
 # 2. 新增 其他节点；
 # 3. AI 默认选择 优先节点；
-# 4. 保留上游 AI 分组原有选项；
-# 5. 不改 [Rule] 主体，不改微信、DNS、fake-ip、IPv6。
+# 4. 保留上游 AI 分组原有选项。
 UPSTREAM_URL = "https://raw.githubusercontent.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever/refs/heads/release/lazy_group.conf"
 
 OUTPUT_FILE = Path("sr_lazy_group_ai.conf")
@@ -60,6 +59,13 @@ def get_section(config: str, section_name: str) -> tuple[str, str, str]:
     return config[:match.start()], config[match.start():end], config[end:]
 
 
+def join_sections(before: str, section_lines: list[str], after: str) -> str:
+    section = "\n".join(section_lines).rstrip() + "\n"
+    if after and not after.startswith("\n"):
+        after = "\n" + after
+    return before + section + after.lstrip("\n")
+
+
 def upsert_general_key(config: str, key: str, value: str) -> str:
     before, section, after = get_section(config, "[General]")
     lines = section.splitlines()
@@ -76,13 +82,13 @@ def upsert_general_key(config: str, key: str, value: str) -> str:
     if not found:
         output.append(f"{key} = {value}")
 
-    return before + "\n".join(output) + after
+    return join_sections(before, output, after)
 
 
 def rebuild_ai_entry(line: str) -> str:
     """
     保留上游 AI = select,... 的原有选项，只插入 优先节点 和 其他节点。
-    修正点：
+    修正：
     - 上游 AI 里通常带 policy-select-name=PROXY，必须改成 policy-select-name=优先节点；
     - 否则即使 优先节点 放第一项，Shadowrocket 仍可能默认选 PROXY；
     - 其他节点 放在所有策略项之后、参数项之前。
@@ -101,14 +107,12 @@ def rebuild_ai_entry(line: str) -> str:
 
     for item in raw_items:
         if item.startswith("policy-select-name="):
-            # 强制默认选择优先节点，覆盖上游的 policy-select-name=PROXY。
             continue
         if "=" in item:
             params.append(item)
         else:
             policy_items.append(item)
 
-    # 防止脚本重复运行后重复插入，并兼容旧名称。
     policy_items = [
         item for item in policy_items
         if item not in {"AI-优先", "AI-其他", "优先节点", "其他节点"}
@@ -169,7 +173,7 @@ def enhance_ai_group(config: str) -> str:
     output.append("# 其他节点：排除已归类地区、上游区域策略组和订阅信息节点")
     output.append(OTHER_NODE_GROUP)
 
-    return before + "\n".join(output) + after
+    return join_sections(before, output, after)
 
 
 def main() -> None:
