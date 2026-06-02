@@ -1,7 +1,8 @@
 # Bing / Microsoft Copilot / 微软 AI 单独直连
 DOMAIN-SUFFIX,bing.com,DIRECT
 DOMAIN-SUFFIX,bing.net,DIRECT
-DOMAIN-SUFFIX,copilot.microsoft.com,DIRECT
+DOMAIN,copilot.microsoft.com,DIRECT
+DOMAIN,copilot.bing.com,DIRECT
 DOMAIN-SUFFIX,copilot.cloud.microsoft,DIRECT
 DOMAIN-SUFFIX,copilotstudio.microsoft.com,DIRECT
 DOMAIN-SUFFIX,bingapis.com,DIRECT
@@ -33,7 +34,5 @@ DOMAIN-SUFFIX,grok.com,AI
 DOMAIN-SUFFIX,grok.x.com,AI
 DOMAIN-SUFFIX,groq.com,AI
 
-# China / 国内域名集中直连
-# 配合 dns-direct-system=true：直连域名使用真实 IP / 系统 DNS，不走 fake-ip。
-# 该规则集覆盖主流国内服务。
+# 国内域名统一直连
 RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/ChinaMax/ChinaMax.list,DIRECT
