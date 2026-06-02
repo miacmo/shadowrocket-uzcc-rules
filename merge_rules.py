@@ -7,6 +7,11 @@ UPSTREAM_URL = "https://johnshall.github.io/Shadowrocket-ADBlock-Rules-Forever/s
 CUSTOM_RULES_FILE = Path("uzcc_rules.txt")
 OUTPUT_FILE = Path("sr_cnip_ai_routing.conf")
 
+DEFAULT_IPV6_COMMENT = "# 启用 IPv6 接管，避免公网 IPv6 绕过 TUN；实际连接通过 prefer-ipv6=false 优先 IPv4"
+LEGACY_IPV6_COMMENTS = {
+    "# 默认关闭 ipv6 支持，如果需要请手动开启",
+}
+
 
 CUSTOM_PROXY_GROUP = """
 [Proxy Group]
@@ -57,7 +62,10 @@ def normalize_ipv6_settings(config: str) -> str:
     """
     lines = []
     for line in config.splitlines():
-        stripped = line.strip().lower()
+        stripped_original = line.strip()
+        stripped = stripped_original.lower()
+        if stripped_original in LEGACY_IPV6_COMMENTS:
+            line = DEFAULT_IPV6_COMMENT
         if stripped in {"prefer-ipv4 = true", "prefer-ipv4 = false", "prefer-ipv6 = true", "prefer-ipv6 = false"}:
             continue
         lines.append(line)
@@ -86,8 +94,9 @@ def normalize_ipv6_settings(config: str) -> str:
             lines.insert(index + 1, "prefer-ipv6 = false")
             return "\n".join(lines) + "\n"
 
-    lines.insert(insert_index, "ipv6 = true")
-    lines.insert(insert_index + 1, "prefer-ipv6 = false")
+    lines.insert(insert_index, DEFAULT_IPV6_COMMENT)
+    lines.insert(insert_index + 1, "ipv6 = true")
+    lines.insert(insert_index + 2, "prefer-ipv6 = false")
     return "\n".join(lines) + "\n"
 
 
