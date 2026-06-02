@@ -91,6 +91,45 @@ def normalize_ipv6_settings(config: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def normalize_direct_dns_settings(config: str) -> str:
+    """
+    Force DIRECT-domain DNS resolution to use the system DNS.
+
+    This improves compatibility for domestic DIRECT traffic and CDN-heavy apps
+    such as WeChat. Without this, DIRECT domains can still be handled through
+    Shadowrocket's fake-ip/TUN DNS path, which may break some domestic image,
+    avatar, sticker, payment, or mini-program resources even when the rule
+    itself correctly matches DIRECT.
+
+    This only affects domains that match DIRECT policies. AI and other proxy
+    traffic still follows their proxy policy and is not changed to DIRECT.
+    """
+    lines = config.splitlines()
+
+    general_index = None
+    for index, line in enumerate(lines):
+        if line.strip() == "[General]":
+            general_index = index
+            break
+
+    if general_index is None:
+        raise ValueError("Missing [General] section in upstream configuration.")
+
+    insert_index = general_index + 1
+    for index in range(general_index + 1, len(lines)):
+        stripped = lines[index].strip().lower()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            break
+
+        insert_index = index + 1
+        if stripped.startswith("dns-direct-system"):
+            lines[index] = "dns-direct-system = true"
+            return "\n".join(lines) + ("\n" if config.endswith("\n") else "")
+
+    lines.insert(insert_index, "dns-direct-system = true")
+    return "\n".join(lines) + ("\n" if config.endswith("\n") else "")
+
+
 def strip_fakeip_from_bypass_tun(config: str) -> str:
     """
     Remove the fake-ip range (198.18.0.0/15) from the upstream `bypass-tun`
@@ -171,6 +210,7 @@ def main() -> None:
 
     upstream = fetch_upstream(UPSTREAM_URL)
     upstream = normalize_ipv6_settings(upstream)
+    upstream = normalize_direct_dns_settings(upstream)
     upstream = strip_fakeip_from_bypass_tun(upstream)
 
     custom_rules = CUSTOM_RULES_FILE.read_text(encoding="utf-8")
