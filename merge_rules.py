@@ -12,6 +12,11 @@ LEGACY_IPV6_COMMENTS = {
     "# 默认关闭 ipv6 支持，如果需要请手动开启",
 }
 
+# IPv6 兜底拒绝：配合 ipv6=true 纳管使用。任何会走 IPv6 出去的连接被秒拒（回 RST），
+# 触发 Happy Eyeballs 立刻回退 IPv4，避免在半通的本地 IPv6 上干等超时。
+IPV6_REJECT_COMMENT = "# v6 强制回落 v4：配合 ipv6=true 纳管，将 IPv6 目标秒拒，触发 Happy Eyeballs 立即回退 IPv4"
+IPV6_REJECT_RULE = "IP-CIDR6,::/0,REJECT,no-resolve"
+
 
 CUSTOM_PROXY_GROUP = """
 [Proxy Group]
@@ -158,6 +163,64 @@ def strip_fakeip_from_bypass_tun(config: str) -> str:
     return "\n".join(out) + ("\n" if config.endswith("\n") else "")
 
 
+def force_ipv6_fallback_to_ipv4(config: str) -> str:
+    """
+    Insert a catch-all IPv6 reject rule immediately BEFORE `GEOIP,CN,DIRECT`.
+
+    Why this exists:
+    `ipv6 = true` pulls IPv6 traffic INTO the TUN, and `prefer-ipv6 = false`
+    only expresses a *soft* preference for IPv4 on dual-stack domains. Neither
+    of them stops an IPv6 connection from actually being *attempted* — and on a
+    half-broken native IPv6 path that attempt just stalls until it times out,
+    then falls back to IPv4. That stall is what makes DIRECT, real-AAAA apps
+    (most visibly WeChat, whose image/sticker/avatar CDNs are full dual-stack
+    and resolved via system DNS because of `dns-direct-system = true`) feel
+    slow, while fake-ip PROXY traffic — which never sees a real IPv6 address —
+    is unaffected.
+
+    `IP-CIDR6,::/0,REJECT` makes any IPv6 destination fail FAST (RST, not a
+    silent drop), so Happy Eyeballs re-establishes over IPv4 immediately
+    instead of waiting on a timeout.
+
+    Placement matters: it is inserted right before `GEOIP,CN,DIRECT`, i.e.
+    AFTER every explicit IPv6 PROXY rule above it (Telegram's IP-CIDR6 ranges,
+    etc.). Those services keep their IPv6 routing; everything else is forced
+    onto IPv4. `no-resolve` keeps this an IP-only match and avoids triggering
+    DNS.
+
+    To A/B test whether IPv6 is actually the cause of slowness, comment out the
+    single `force_ipv6_fallback_to_ipv4(...)` call in main() and regenerate.
+    """
+    normalized_rule = IPV6_REJECT_RULE.lower().replace(" ", "")
+
+    lines = config.splitlines()
+
+    # Idempotent: don't add the rule twice.
+    for line in lines:
+        if line.strip().lower().replace(" ", "") == normalized_rule:
+            return config
+
+    insert_at = None
+    for index, line in enumerate(lines):
+        if line.strip().upper().replace(" ", "").startswith("GEOIP,CN,DIRECT"):
+            insert_at = index
+            break
+
+    if insert_at is None:
+        # Fallback anchor: insert before the FINAL rule.
+        for index, line in enumerate(lines):
+            if line.strip().upper().startswith("FINAL,"):
+                insert_at = index
+                break
+
+    if insert_at is None:
+        raise ValueError("Could not find GEOIP,CN,DIRECT or FINAL rule to anchor the IPv6 reject rule.")
+
+    lines.insert(insert_at, IPV6_REJECT_COMMENT)
+    lines.insert(insert_at + 1, IPV6_REJECT_RULE)
+    return "\n".join(lines) + ("\n" if config.endswith("\n") else "")
+
+
 def insert_proxy_group(upstream: str) -> str:
     marker = "[Rule]"
     if marker not in upstream:
@@ -221,6 +284,9 @@ def main() -> None:
     upstream = normalize_ipv6_settings(upstream)
     upstream = normalize_direct_dns_settings(upstream)
     upstream = strip_fakeip_from_bypass_tun(upstream)
+    # 把 IPv6 兜底拒绝插在 GEOIP,CN,DIRECT 之前。
+    # A/B 测试 IPv6 是否为元凶时，注释掉下面这一行重新生成即可。
+    upstream = force_ipv6_fallback_to_ipv4(upstream)
 
     custom_rules = CUSTOM_RULES_FILE.read_text(encoding="utf-8")
 
