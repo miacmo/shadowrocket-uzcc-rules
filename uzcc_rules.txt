@@ -6,8 +6,9 @@ DOMAIN-SUFFIX,copilot.cloud.microsoft,DIRECT
 DOMAIN-SUFFIX,copilotstudio.microsoft.com,DIRECT
 DOMAIN-SUFFIX,bingapis.com,DIRECT
 
-# WeChat / 微信直连
+# WeChat / 微信直连，修复图片、头像、小程序资源加载问题
 RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/WeChat/WeChat.list,DIRECT
+
 
 # OpenAI / ChatGPT
 RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/OpenAI/OpenAI.list,AI
