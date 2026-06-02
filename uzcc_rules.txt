@@ -6,29 +6,32 @@ DOMAIN-SUFFIX,copilot.cloud.microsoft,DIRECT
 DOMAIN-SUFFIX,copilotstudio.microsoft.com,DIRECT
 DOMAIN-SUFFIX,bingapis.com,DIRECT
 
+# WeChat / 微信直连
+RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/WeChat/WeChat.list,DIRECT
+
 # OpenAI / ChatGPT
-RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/OpenAI/OpenAI.list,AI,force-remote-dns
+RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/OpenAI/OpenAI.list,AI
 
 # Claude / Anthropic
-RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Claude/Claude.list,AI,force-remote-dns
-RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Anthropic/Anthropic.list,AI,force-remote-dns
+RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Claude/Claude.list,AI
+RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Anthropic/Anthropic.list,AI
 
 # Sora
-DOMAIN-SUFFIX,sora.com,AI,force-remote-dns
+DOMAIN-SUFFIX,sora.com,AI
 
 # Perplexity
-DOMAIN-SUFFIX,perplexity.ai,AI,force-remote-dns
-DOMAIN-SUFFIX,perplexity.com,AI,force-remote-dns
-DOMAIN-SUFFIX,pplx.ai,AI,force-remote-dns
-DOMAIN,pplx-res.cloudinary.com,AI,force-remote-dns
-DOMAIN,ppl-ai-file-upload.s3.amazonaws.com,AI,force-remote-dns
+DOMAIN-SUFFIX,perplexity.ai,AI
+DOMAIN-SUFFIX,perplexity.com,AI
+DOMAIN-SUFFIX,pplx.ai,AI
+DOMAIN,pplx-res.cloudinary.com,AI
+DOMAIN,ppl-ai-file-upload.s3.amazonaws.com,AI
 
 # Poe
-DOMAIN-SUFFIX,poe.com,AI,force-remote-dns
-DOMAIN-SUFFIX,poecdn.net,AI,force-remote-dns
+DOMAIN-SUFFIX,poe.com,AI
+DOMAIN-SUFFIX,poecdn.net,AI
 
 # Grok / xAI / Groq
-DOMAIN-SUFFIX,x.ai,AI,force-remote-dns
-DOMAIN-SUFFIX,grok.com,AI,force-remote-dns
-DOMAIN-SUFFIX,grok.x.com,AI,force-remote-dns
-DOMAIN-SUFFIX,groq.com,AI,force-remote-dns
+DOMAIN-SUFFIX,x.ai,AI
+DOMAIN-SUFFIX,grok.com,AI
+DOMAIN-SUFFIX,grok.x.com,AI
+DOMAIN-SUFFIX,groq.com,AI
