@@ -38,98 +38,6 @@ def fetch_upstream(url: str) -> str:
         return response.read().decode("utf-8")
 
 
-WECHAT_ALWAYS_REAL_IP = [
-    "*.qq.com",
-    "*.weixin.qq.com",
-    "*.weixin.com",
-    "*.wechat.com",
-    "*.wechatpay.com",
-    "*.wechatlegal.net",
-    "*.wechatos.net",
-    "*.weixinbridge.com",
-    "*.weixinsxy.com",
-    "*.servicewechat.com",
-    "*.qpic.cn",
-    "*.qlogo.cn",
-    "*.gtimg.com",
-    "*.gtimg.cn",
-    "*.idqqimg.com",
-    "*.wx.gtimg.com",
-    "*.wx.qq.com",
-    "*.wxs.qq.com",
-    "*.wxapp.tc.qq.com",
-    "*.vweixinthumb.tc.qq.com",
-    "*.map.qq.com",
-    "*.iot-tencent.com",
-    "*.tenpay.com",
-    "*.wechatpay.cn",
-    "*.up-hl.3g.qq.com",
-    "*.yun-hl.3g.qq.com",
-    "mp.weixin.qq.com",
-    "res.wx.qq.com",
-    "mmbiz.qpic.cn",
-    "mmbiz.qlogo.cn",
-    "weixin110.qq.com",
-    "vweixinf.tc.qq.com",
-    "btrace.qq.com",
-    "dldir1.qq.com",
-    "wup.imtt.qq.com",
-    "apd-pcdnwxlogin.teg.tencent-cloud.net",
-]
-
-
-def ensure_always_real_ip(config: str) -> str:
-    """
-    给微信/腾讯资源域名启用 always-real-ip，让这些域名返回真实 IP，
-    避免 fake-ip 在微信图片、头像、小程序 CDN 场景下触发白图问题。
-
-    注意：这里只做微信/腾讯资源的局部修复，不全局关闭 fake-ip，
-    不改变 AI、PROXY、DNS、IPv6 的既有逻辑。
-    """
-    key_name = "always-real-ip"
-    wanted = WECHAT_ALWAYS_REAL_IP
-
-    out = []
-    found = False
-
-    for line in config.splitlines():
-        stripped = line.strip().lower()
-        if stripped.startswith(f"{key_name}"):
-            key, sep, value = line.partition("=")
-            if sep:
-                existing = [item.strip() for item in value.split(",") if item.strip()]
-                merged = existing[:]
-                for item in wanted:
-                    if item not in merged:
-                        merged.append(item)
-                line = f"{key.rstrip()} = " + ", ".join(merged)
-                found = True
-        out.append(line)
-
-    if not found:
-        new_out = []
-        inserted = False
-        for line in out:
-            new_out.append(line)
-            if line.strip().lower().startswith("dns-server"):
-                new_out.append(f"{key_name} = " + ", ".join(wanted))
-                inserted = True
-
-        if not inserted:
-            # 兜底插入到 [General] 内部，避免追加到文件末尾导致 section 错位。
-            general_index = None
-            for index, line in enumerate(new_out):
-                if line.strip() == "[General]":
-                    general_index = index
-                    break
-            if general_index is None:
-                raise ValueError("Missing [General] section in upstream configuration.")
-            new_out.insert(general_index + 1, f"{key_name} = " + ", ".join(wanted))
-
-        out = new_out
-
-    return "\n".join(out) + ("\n" if config.endswith("\n") else "")
-
 
 def enforce_ipv6_policy(config: str) -> str:
     """
@@ -185,6 +93,48 @@ def enforce_ipv6_policy(config: str) -> str:
 
     return "\n".join(out) + ("\n" if config.endswith("\n") else "")
 
+
+
+def enforce_direct_dns_policy(config: str) -> str:
+    """
+    让 DIRECT 域名类规则使用系统 DNS/真实 IP 解析，避免直连域名走 fake-ip。
+
+    这是本项目当前采用的总方案：非国外/直连域名尽量真实 IP，
+    AI / PROXY 代理流量继续交给代理链路处理。
+    """
+    key_name = "dns-direct-system"
+    out = []
+    in_general = False
+    found = False
+
+    for line in config.splitlines():
+        stripped = line.strip()
+        lower = stripped.lower()
+
+        if stripped == "[General]":
+            in_general = True
+            out.append(line)
+            continue
+
+        if stripped.startswith("[") and stripped.endswith("]") and stripped != "[General]":
+            if in_general and not found:
+                out.append(f"{key_name} = true")
+                found = True
+            in_general = False
+            out.append(line)
+            continue
+
+        if in_general and lower.startswith(f"{key_name}"):
+            out.append(f"{key_name} = true")
+            found = True
+            continue
+
+        out.append(line)
+
+    if in_general and not found:
+        out.append(f"{key_name} = true")
+
+    return "\n".join(out) + ("\n" if config.endswith("\n") else "")
 
 def strip_fakeip_from_bypass_tun(config: str) -> str:
     """
@@ -266,8 +216,8 @@ def main() -> None:
 
     upstream = fetch_upstream(UPSTREAM_URL)
     upstream = enforce_ipv6_policy(upstream)
+    upstream = enforce_direct_dns_policy(upstream)
     upstream = strip_fakeip_from_bypass_tun(upstream)
-    upstream = ensure_always_real_ip(upstream)
 
     custom_rules = CUSTOM_RULES_FILE.read_text(encoding="utf-8")
 
