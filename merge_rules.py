@@ -3,13 +3,16 @@ from urllib.request import Request, urlopen
 from datetime import datetime, timezone
 import re
 
-# 直接基于 Johnshall 的 lazy_group.conf。
-# 只增强 AI 分组：新增 AI-优先、AI-其他，并把它们合入 AI 入口。
-# 不重构上游规则，不改微信、DNS、fake-ip、IPv6 等主体逻辑。
+# 基于 Johnshall 的 lazy_group.conf。
+# 只增强 [Proxy Group] 中的 AI 分组：
+# 1. 新增 AI-优先；
+# 2. 新增 AI-其他；
+# 3. 保留上游 AI 分组原有选项；
+# 4. 不改 [Rule] 主体，不改微信、DNS、fake-ip、IPv6。
 UPSTREAM_URL = "https://raw.githubusercontent.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever/refs/heads/release/lazy_group.conf"
 
-CUSTOM_RULES_FILE = Path("uzcc_rules.txt")
 OUTPUT_FILE = Path("sr_lazy_group_ai.conf")
+UPDATE_URL = "https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/sr_lazy_group_ai.conf"
 
 EXCLUDE_WORDS = (
     "剩余|流量|到期|套餐|Expire|Traffic|官网|订阅|Subscription|"
@@ -34,138 +37,136 @@ AI_OTHER_GROUP = (
     ")).*$"
 )
 
-AI_ENTRY = "AI = select,AI-优先,AI-台湾,AI-香港,AI-新加坡,AI-日本,AI-美国,AI-其他,PROXY,DIRECT"
-
 
 def fetch_upstream(url: str) -> str:
-    request = Request(
-        url,
-        headers={"User-Agent": "Mozilla/5.0 Shadowrocket-Rule-Merger"},
-    )
+    request = Request(url, headers={"User-Agent": "Mozilla/5.0 Shadowrocket-Rule-Merger"})
     with urlopen(request, timeout=30) as response:
         return response.read().decode("utf-8")
 
 
-def split_sections(config: str, section_name: str) -> tuple[str, str, str]:
-    """
-    返回 section 前、section 内容、section 后。
-    section_name 例：[Proxy Group]
-    """
-    start = config.find(section_name)
-    if start == -1:
+def get_section(config: str, section_name: str) -> tuple[str, str, str]:
+    pattern = re.compile(rf"(?m)^{re.escape(section_name)}\s*$")
+    match = pattern.search(config)
+    if not match:
         raise ValueError(f"Missing {section_name} section.")
 
-    next_section = re.search(r"\n\[[^\]]+\]", config[start + len(section_name):])
-    if next_section:
-        end = start + len(section_name) + next_section.start()
+    next_match = re.search(r"(?m)^\[[^\]]+\]\s*$", config[match.end():])
+    if next_match:
+        end = match.end() + next_match.start()
     else:
         end = len(config)
 
-    return config[:start], config[start:end], config[end:]
+    return config[:match.start()], config[match.start():end], config[end:]
 
 
-def enhance_ai_proxy_group(config: str) -> str:
-    """
-    只处理 [Proxy Group] 中的 AI 相关分组：
-    1. 把 AI 入口替换为包含 AI-优先 和 AI-其他的新入口；
-    2. 删除旧的 AI-优先 / AI-其他，避免重复；
-    3. 在 AI 入口后插入新的 AI-优先 / AI-其他；
-    4. 不重写上游已有的 AI-台湾 / AI-香港 / AI-新加坡 / AI-日本 / AI-美国。
-    """
-    before, section, after = split_sections(config, "[Proxy Group]")
+def upsert_general_key(config: str, key: str, value: str) -> str:
+    before, section, after = get_section(config, "[General]")
     lines = section.splitlines()
+    output = []
+    found = False
 
-    new_lines = []
-    inserted_extra_groups = False
-    found_ai_entry = False
+    for line in lines:
+        if re.match(rf"^\s*{re.escape(key)}\s*=", line, flags=re.IGNORECASE):
+            output.append(f"{key} = {value}")
+            found = True
+        else:
+            output.append(line)
+
+    if not found:
+        output.append(f"{key} = {value}")
+
+    return before + "\n".join(output) + after
+
+
+def rebuild_ai_entry(line: str) -> str:
+    """
+    保留上游 AI = select,... 的原有选项，只插入 AI-优先 和 AI-其他。
+    AI-优先放在 select 后第一位；
+    AI-其他放在 PROXY / DIRECT / REJECT 之前。
+    """
+    _, _, value = line.partition("=")
+    parts = [item.strip() for item in value.split(",") if item.strip()]
+
+    if not parts:
+        return "AI = select,AI-优先,AI-其他,PROXY,DIRECT"
+
+    group_type = parts[0]
+    choices = parts[1:]
+
+    # 防止脚本重复运行后重复插入。
+    choices = [item for item in choices if item not in {"AI-优先", "AI-其他"}]
+
+    new_choices = ["AI-优先"]
+    inserted_other = False
+    fallback_names = {"PROXY", "Proxy", "proxy", "DIRECT", "Direct", "direct", "REJECT", "Reject", "reject"}
+
+    for item in choices:
+        if not inserted_other and item in fallback_names:
+            new_choices.append("AI-其他")
+            inserted_other = True
+        new_choices.append(item)
+
+    if not inserted_other:
+        new_choices.append("AI-其他")
+
+    return "AI = " + ",".join([group_type] + new_choices)
+
+
+def enhance_ai_group(config: str) -> str:
+    before, section, after = get_section(config, "[Proxy Group]")
+    lines = section.splitlines()
+    output = []
+    replaced_ai = False
 
     for line in lines:
         stripped = line.strip()
 
-        if stripped.startswith("AI-优先"):
+        # 删除脚本旧版本插入的 AI-优先 / AI-其他，避免重复。
+        if re.match(r"^AI-优先\s*=", stripped):
             continue
-        if stripped.startswith("AI-其他"):
-            continue
-
-        if stripped.startswith("AI ="):
-            new_lines.append(AI_ENTRY)
-            new_lines.append("")
-            new_lines.append("# AI 优先入口：只收录标准台湾前缀节点")
-            new_lines.append(AI_PRIORITY_GROUP)
-            new_lines.append("")
-            new_lines.append("# AI 其他入口：排除已归类地区、上游区域策略组和订阅信息节点")
-            new_lines.append(AI_OTHER_GROUP)
-            inserted_extra_groups = True
-            found_ai_entry = True
+        if re.match(r"^AI-其他\s*=", stripped):
             continue
 
-        new_lines.append(line)
+        if re.match(r"^AI\s*=", stripped):
+            output.append(rebuild_ai_entry(stripped))
+            output.append("")
+            output.append("# AI 优先入口：只收录标准台湾前缀节点")
+            output.append(AI_PRIORITY_GROUP)
+            output.append("")
+            output.append("# AI 其他入口：排除已归类地区、上游区域策略组和订阅信息节点")
+            output.append(AI_OTHER_GROUP)
+            replaced_ai = True
+            continue
 
-    if not found_ai_entry:
-        raise ValueError("Missing AI entry in [Proxy Group].")
+        output.append(line)
 
-    if not inserted_extra_groups:
-        raise RuntimeError("Failed to insert AI extra groups.")
+    if not replaced_ai:
+        raise ValueError("Missing AI entry in [Proxy Group]. Upstream lazy_group.conf may have changed.")
 
-    return before + "\n".join(new_lines) + after
-
-
-def insert_custom_rules(config: str, custom_rules: str) -> str:
-    """
-    把自定义规则插入 [Rule] 顶部，优先于上游规则。
-    这里主要放 Bing/Copilot 直连、AI 规则、ChinaMax。
-    """
-    marker = "[Rule]"
-    if marker not in config:
-        raise ValueError("Missing [Rule] section.")
-
-    before_rule, after_rule = config.split(marker, 1)
-
-    generated_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-
-    header = f"""
-# ============================================================
-# 自动生成的配置文件
-# 生成时间：{generated_time}
-# 上游规则：{UPSTREAM_URL}
-# 自定义规则：{CUSTOM_RULES_FILE}
-# 输出文件：{OUTPUT_FILE}
-# ============================================================
-
-"""
-
-    custom_block = f"""
-[Rule]
-
-# ============================================================
-# 自定义规则开始
-# ============================================================
-
-{custom_rules.strip()}
-
-# ============================================================
-# 自定义规则结束
-# 以下为上游 lazy_group.conf 默认规则
-# ============================================================
-
-"""
-
-    return before_rule.rstrip() + "\n\n" + header + custom_block + after_rule.lstrip()
+    return before + "\n".join(output) + after
 
 
 def main() -> None:
-    if not CUSTOM_RULES_FILE.exists():
-        raise FileNotFoundError(f"Custom rules file not found: {CUSTOM_RULES_FILE}")
-
     upstream = fetch_upstream(UPSTREAM_URL)
 
-    # 只增强 AI 策略组，不碰上游 General / Rule 主体逻辑。
-    enhanced = enhance_ai_proxy_group(upstream)
+    # 只改 update-url，避免 Shadowrocket 更新时跳回 Johnshall 原始地址。
+    # 不改 DNS / fake-ip / IPv6 / 微信 / [Rule] 主体。
+    upstream = upsert_general_key(upstream, "update-url", UPDATE_URL)
 
-    custom_rules = CUSTOM_RULES_FILE.read_text(encoding="utf-8")
-    merged = insert_custom_rules(enhanced, custom_rules)
+    merged = enhance_ai_group(upstream)
 
-    OUTPUT_FILE.write_text(merged, encoding="utf-8")
+    generated_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    banner = (
+        f"# ============================================================\n"
+        f"# 自动生成的配置文件\n"
+        f"# 生成时间：{generated_time}\n"
+        f"# 上游规则：{UPSTREAM_URL}\n"
+        f"# 输出文件：{OUTPUT_FILE}\n"
+        f"# 修改范围：仅增强 [Proxy Group] 的 AI 分组\n"
+        f"# ============================================================\n\n"
+    )
+
+    OUTPUT_FILE.write_text(banner + merged, encoding="utf-8")
     print(f"Generated {OUTPUT_FILE}")
 
 
