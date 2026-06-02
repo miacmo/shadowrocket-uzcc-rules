@@ -40,19 +40,20 @@ def fetch_upstream(url: str) -> str:
 
 def normalize_ipv6_settings(config: str) -> str:
     """
-    Keep IPv6-related settings together in the [General] section.
+    Normalize IPv6-related settings in the [General] section.
 
     Behavior:
     1. Remove existing prefer-ipv4 and prefer-ipv6 preference lines.
-    2. Force `ipv6 = true` so Shadowrocket TAKES OVER IPv6 traffic (instead of
-       letting it leak out of the TUN onto the host's native IPv6 path), and
-       insert `prefer-ipv6 = false` right after it. Combined with the
-       `IP-CIDR6,::/0,REJECT,no-resolve` rule in uzcc_rules.txt, every IPv6
-       target is rejected fast so apps fall back to IPv4 — this fixes services
-       with AAAA records (e.g. Tencent Cloud) failing over a half-broken
-       native IPv6 link.
-    3. If the upstream [General] section has no `ipv6 = ...` line, insert both
-       `ipv6 = true` and `prefer-ipv6 = false` right after [General].
+    2. Force `ipv6 = true` so Shadowrocket takes over IPv6 traffic instead of
+       letting public IPv6 bypass the TUN through the system's native network.
+    3. Insert `prefer-ipv6 = false` right after `ipv6 = true` so dual-stack
+       domains prefer IPv4 when Shadowrocket performs resolution or connection
+       selection.
+    4. If the upstream [General] section has no `ipv6 = ...` line, insert both
+       `ipv6 = true` and `prefer-ipv6 = false` near the end of [General].
+
+    This does not block IPv6 globally. It keeps IPv6 under Shadowrocket control
+    while avoiding IPv6-first connection behavior.
     """
     lines = []
     for line in config.splitlines():
