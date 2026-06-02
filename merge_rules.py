@@ -9,6 +9,7 @@ import re
 # 2. 新增 其他节点；
 # 3. AI 默认选择 优先节点；
 # 4. 保留上游 AI 分组原有选项；
+# 5. 不改 [Rule] 主体，不改微信、DNS、fake-ip、IPv6。
 UPSTREAM_URL = "https://raw.githubusercontent.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever/refs/heads/release/lazy_group.conf"
 
 OUTPUT_FILE = Path("sr_lazy_group_ai.conf")
@@ -81,25 +82,42 @@ def upsert_general_key(config: str, key: str, value: str) -> str:
 def rebuild_ai_entry(line: str) -> str:
     """
     保留上游 AI = select,... 的原有选项，只插入 优先节点 和 其他节点。
-    优先节点放在 AI 入口第一位，使 AI 默认选择优先节点，而不是 PROXY。
-    其他节点放在 AI 选项列表最底部。
+    修正点：
+    - 上游 AI 里通常带 policy-select-name=PROXY，必须改成 policy-select-name=优先节点；
+    - 否则即使 优先节点 放第一项，Shadowrocket 仍可能默认选 PROXY；
+    - 其他节点 放在所有策略项之后、参数项之前。
     """
     _, _, value = line.partition("=")
-    parts = [item.strip() for item in value.split(",") if item.strip()]
+    raw_parts = [item.strip() for item in value.split(",") if item.strip()]
 
-    if not parts:
-        return "AI = select,优先节点,PROXY,DIRECT,其他节点"
+    if not raw_parts:
+        return "AI = select,优先节点,PROXY,DIRECT,其他节点,policy-select-name=优先节点"
 
-    group_type = parts[0]
-    choices = parts[1:]
+    group_type = raw_parts[0]
+    raw_items = raw_parts[1:]
+
+    policy_items = []
+    params = []
+
+    for item in raw_items:
+        if item.startswith("policy-select-name="):
+            # 强制默认选择优先节点，覆盖上游的 policy-select-name=PROXY。
+            continue
+        if "=" in item:
+            params.append(item)
+        else:
+            policy_items.append(item)
 
     # 防止脚本重复运行后重复插入，并兼容旧名称。
-    choices = [item for item in choices if item not in {"AI-优先", "AI-其他", "优先节点", "其他节点"}]
+    policy_items = [
+        item for item in policy_items
+        if item not in {"AI-优先", "AI-其他", "优先节点", "其他节点"}
+    ]
 
-    # 关键：优先节点必须是 select 后第一项，这样默认不会落到 PROXY。
-    new_choices = ["优先节点"] + choices + ["其他节点"]
+    new_policy_items = ["优先节点"] + policy_items + ["其他节点"]
+    new_params = ["policy-select-name=优先节点"] + params
 
-    return "AI = " + ",".join([group_type] + new_choices)
+    return "AI = " + ",".join([group_type] + new_policy_items + new_params)
 
 
 def enhance_ai_group(config: str) -> str:
