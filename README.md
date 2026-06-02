@@ -64,6 +64,14 @@ prefer-ipv6 = false
 
 含义是：让 Shadowrocket 接管 IPv6，避免公网 IPv6 绕过 TUN；同时在双栈场景下不优先使用 IPv6。这个设置不是全局封禁 IPv6，而是把 IPv6 纳入 Shadowrocket 管辖。
 
+完整规则版会默认启用：
+
+```ini
+dns-direct-system = true
+```
+
+含义是：命中 `DIRECT` 的域名使用系统 DNS 解析。这个设置主要用于提升国内直连服务的兼容性，尤其是微信头像、表情包、图片、小程序、银行、支付和国内 CDN 这类资源，减少 `DIRECT + fake-ip/TUN` 场景下的异常。它只影响直连域名，不会让 AI 或其他代理流量变成直连。
+
 当前主配置不默认启用 `force-remote-dns`，也不默认启用 DNS-over-PROXY。原因是新版 Shadowrocket 配置思路下，代理策略本身通常会由代理链路处理解析；而 `force-remote-dns` 和 `dns-server = ...#proxy` 更适合作为个人实验配置，不适合作为主线默认项。
 
 如果 DNS 泄露检测显示中国 DNS，不一定代表代理流量泄露。请优先确认：出口 IP 是否为代理节点、是否存在本机 IPv6 泄露、AI / 社交平台是否实际可用。
