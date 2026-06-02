@@ -108,6 +108,61 @@ def ensure_always_real_ip(config: str) -> str:
     return "\n".join(out) + ("\n" if config.endswith("\n") else "")
 
 
+def enforce_ipv6_policy(config: str) -> str:
+    """
+    强制启用 IPv6 TUN 接管，但不优先使用 IPv6 回源。
+
+    上游默认 ipv6=false 会让公网 IPv6 可能绕过 TUN；这里固定改成
+    ipv6=true，并确保 prefer-ipv6=false，符合本项目“管住 IPv6，
+    但实际优先 IPv4”的设计。
+    """
+    out = []
+    in_general = False
+    found_ipv6 = False
+    found_prefer_ipv6 = False
+
+    for line in config.splitlines():
+        stripped = line.strip()
+        lower = stripped.lower()
+
+        if stripped == "[General]":
+            in_general = True
+            out.append(line)
+            continue
+
+        if stripped.startswith("[") and stripped.endswith("]") and stripped != "[General]":
+            if in_general:
+                if not found_ipv6:
+                    out.append("ipv6 = true")
+                    found_ipv6 = True
+                if not found_prefer_ipv6:
+                    out.append("prefer-ipv6 = false")
+                    found_prefer_ipv6 = True
+            in_general = False
+            out.append(line)
+            continue
+
+        if in_general and lower.startswith("ipv6"):
+            out.append("ipv6 = true")
+            found_ipv6 = True
+            continue
+
+        if in_general and lower.startswith("prefer-ipv6"):
+            out.append("prefer-ipv6 = false")
+            found_prefer_ipv6 = True
+            continue
+
+        out.append(line)
+
+    if in_general:
+        if not found_ipv6:
+            out.append("ipv6 = true")
+        if not found_prefer_ipv6:
+            out.append("prefer-ipv6 = false")
+
+    return "\n".join(out) + ("\n" if config.endswith("\n") else "")
+
+
 def strip_fakeip_from_bypass_tun(config: str) -> str:
     """
     Remove the fake-ip range (198.18.0.0/15) from the upstream `bypass-tun`
@@ -187,6 +242,7 @@ def main() -> None:
         raise FileNotFoundError(f"Custom rules file not found: {CUSTOM_RULES_FILE}")
 
     upstream = fetch_upstream(UPSTREAM_URL)
+    upstream = enforce_ipv6_policy(upstream)
     upstream = strip_fakeip_from_bypass_tun(upstream)
     upstream = ensure_always_real_ip(upstream)
 
