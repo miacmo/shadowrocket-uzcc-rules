@@ -90,6 +90,25 @@ def normalize_ipv6_settings(config: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def strip_fakeip_from_bypass_tun(config: str) -> str:
+    """
+    Remove the fake-ip range (198.18.0.0/15) from the upstream `bypass-tun`
+    line. Shadowrocket hands out fake IPs inside 198.18.x.x, and fake-ip ONLY
+    works if that range is routed THROUGH the TUN. Leaving 198.18.0.0/15 in
+    bypass-tun tells the OS to bypass the TUN for exactly those addresses, which
+    breaks SR's fake-ip -> real-host relay for some destinations (e.g. Tencent).
+    """
+    target = "198.18.0.0/15"
+    out = []
+    for line in config.splitlines():
+        if line.strip().lower().startswith("bypass-tun") and target in line:
+            key, _, value = line.partition("=")
+            cidrs = [c.strip() for c in value.split(",") if c.strip() and c.strip() != target]
+            line = f"{key.rstrip()} = " + ",".join(cidrs)
+        out.append(line)
+    return "\n".join(out) + ("\n" if config.endswith("\n") else "")
+
+
 def insert_proxy_group(upstream: str) -> str:
     marker = "[Rule]"
     if marker not in upstream:
@@ -151,6 +170,7 @@ def main() -> None:
 
     upstream = fetch_upstream(UPSTREAM_URL)
     upstream = normalize_ipv6_settings(upstream)
+    upstream = strip_fakeip_from_bypass_tun(upstream)
 
     custom_rules = CUSTOM_RULES_FILE.read_text(encoding="utf-8")
 
