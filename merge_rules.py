@@ -2,10 +2,11 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from datetime import datetime, timezone
 
-UPSTREAM_URL = "https://johnshall.github.io/Shadowrocket-ADBlock-Rules-Forever/sr_cnip.conf"
+# 使用 Johnshall 的 lazy.conf 作为底座。
+UPSTREAM_URL = "https://johnshall.github.io/Shadowrocket-ADBlock-Rules-Forever/lazy.conf"
 
 CUSTOM_RULES_FILE = Path("uzcc_rules.txt")
-OUTPUT_FILE = Path("sr_cnip_ai_routing.conf")
+OUTPUT_FILE = Path("sr_lazy_ai_routing.conf")
 
 
 CUSTOM_PROXY_GROUP = """
@@ -14,7 +15,7 @@ CUSTOM_PROXY_GROUP = """
 # AI 分流入口，优先使用命名为“台湾-”的节点，其余地区可手动选择
 AI = select,AI-优先,AI-台湾,AI-香港,AI-新加坡,AI-日本,AI-美国,AI-其他,PROXY,DIRECT
 
-# 优先入口：只收录“台湾-”这类节点
+# 优先入口：只收录“台湾- / 台灣- / TW- / Taiwan- / 🇹🇼-”这类标准前缀节点
 AI-优先 = select,policy-regex-filter=^(?=.*(台湾-|台灣-|TW-|Taiwan-|🇹🇼-))(?!.*(剩余|流量|到期|套餐|Expire|Traffic|官网|订阅|Subscription)).*$
 
 # 地区入口：按节点名称自动归类，排除订阅信息类节点
@@ -38,121 +39,79 @@ def fetch_upstream(url: str) -> str:
         return response.read().decode("utf-8")
 
 
-
-def enforce_ipv6_policy(config: str) -> str:
+def upsert_general_key(config: str, key: str, value: str) -> str:
     """
-    强制启用 IPv6 TUN 接管，但不优先使用 IPv6 回源。
-
-    上游默认 ipv6=false 会让公网 IPv6 可能绕过 TUN；这里固定改成
-    ipv6=true，并确保 prefer-ipv6=false，符合本项目“管住 IPv6，
-    但实际优先 IPv4”的设计。
+    只在 [General] 段内更新或插入指定键。
     """
-    out = []
-    in_general = False
-    found_ipv6 = False
-    found_prefer_ipv6 = False
-
-    for line in config.splitlines():
-        stripped = line.strip()
-        lower = stripped.lower()
-
-        if stripped == "[General]":
-            in_general = True
-            out.append(line)
-            continue
-
-        if stripped.startswith("[") and stripped.endswith("]") and stripped != "[General]":
-            if in_general:
-                if not found_ipv6:
-                    out.append("ipv6 = true")
-                    found_ipv6 = True
-                if not found_prefer_ipv6:
-                    out.append("prefer-ipv6 = false")
-                    found_prefer_ipv6 = True
-            in_general = False
-            out.append(line)
-            continue
-
-        if in_general and lower.startswith("ipv6"):
-            out.append("ipv6 = true")
-            found_ipv6 = True
-            continue
-
-        if in_general and lower.startswith("prefer-ipv6"):
-            out.append("prefer-ipv6 = false")
-            found_prefer_ipv6 = True
-            continue
-
-        out.append(line)
-
-    if in_general:
-        if not found_ipv6:
-            out.append("ipv6 = true")
-        if not found_prefer_ipv6:
-            out.append("prefer-ipv6 = false")
-
-    return "\n".join(out) + ("\n" if config.endswith("\n") else "")
-
-
-
-def enforce_direct_dns_policy(config: str) -> str:
-    """
-    让 DIRECT 域名类规则使用系统 DNS/真实 IP 解析，避免直连域名走 fake-ip。
-
-    这是本项目当前采用的总方案：非国外/直连域名尽量真实 IP，
-    AI / PROXY 代理流量继续交给代理链路处理。
-    """
-    key_name = "dns-direct-system"
+    lines = config.splitlines()
     out = []
     in_general = False
     found = False
 
-    for line in config.splitlines():
+    for line in lines:
         stripped = line.strip()
         lower = stripped.lower()
 
-        if stripped == "[General]":
-            in_general = True
-            out.append(line)
-            continue
-
-        if stripped.startswith("[") and stripped.endswith("]") and stripped != "[General]":
+        if stripped.startswith("[") and stripped.endswith("]"):
             if in_general and not found:
-                out.append(f"{key_name} = true")
+                out.append(f"{key} = {value}")
                 found = True
-            in_general = False
-            out.append(line)
-            continue
+            in_general = lower == "[general]"
 
-        if in_general and lower.startswith(f"{key_name}"):
-            out.append(f"{key_name} = true")
+        if in_general and lower.startswith(f"{key.lower()}"):
+            out.append(f"{key} = {value}")
             found = True
-            continue
-
-        out.append(line)
+        else:
+            out.append(line)
 
     if in_general and not found:
-        out.append(f"{key_name} = true")
+        out.append(f"{key} = {value}")
 
     return "\n".join(out) + ("\n" if config.endswith("\n") else "")
 
-def strip_fakeip_from_bypass_tun(config: str) -> str:
+
+def remove_cidr_from_general_list(config: str, keys: tuple[str, ...], target: str) -> str:
     """
-    Remove the fake-ip range (198.18.0.0/15) from the upstream `bypass-tun`
-    line. Shadowrocket hands out fake IPs inside 198.18.x.x, and fake-ip ONLY
-    works if that range is routed THROUGH the TUN. Leaving 198.18.0.0/15 in
-    bypass-tun tells the OS to bypass the TUN for exactly those addresses, which
-    breaks SR's fake-ip -> real-host relay for some destinations (e.g. Tencent).
+    从 bypass-tun / tun-excluded-routes 等列表字段里移除指定 CIDR。
+    这里保留这个修正是为了避免上游变动时把 fake-ip 段重新放回 TUN 绕行列表。
     """
-    target = "198.18.0.0/15"
     out = []
     for line in config.splitlines():
-        if line.strip().lower().startswith("bypass-tun") and target in line:
-            key, _, value = line.partition("=")
-            cidrs = [c.strip() for c in value.split(",") if c.strip() and c.strip() != target]
-            line = f"{key.rstrip()} = " + ",".join(cidrs)
+        stripped = line.strip()
+        lower = stripped.lower()
+        if any(lower.startswith(k.lower()) for k in keys) and target in line:
+            key, sep, value = line.partition("=")
+            if sep:
+                cidrs = [
+                    item.strip()
+                    for item in value.split(",")
+                    if item.strip() and item.strip() != target
+                ]
+                line = f"{key.rstrip()} = " + ", ".join(cidrs)
         out.append(line)
     return "\n".join(out) + ("\n" if config.endswith("\n") else "")
+
+
+def normalize_general(upstream: str) -> str:
+    """
+    使用 lazy.conf 的默认 General 逻辑，不强行上 always-real-ip / dns-direct-system。
+    只做两件确定需要的事：
+    1. 接管 IPv6，但不优先 IPv6 回源；
+    2. 防止 198.18.0.0/15 被放进 TUN 绕行列表。
+    """
+    upstream = upsert_general_key(upstream, "ipv6", "true")
+    upstream = upsert_general_key(upstream, "prefer-ipv6", "false")
+
+    # 不启用 dns-direct-system。默认规则能正常微信，就不要再强改 DNS 行为。
+    # 如果上游已有 dns-direct-system，统一设为 false。
+    upstream = upsert_general_key(upstream, "dns-direct-system", "false")
+
+    upstream = remove_cidr_from_general_list(
+        upstream,
+        keys=("bypass-tun", "tun-excluded-routes"),
+        target="198.18.0.0/15",
+    )
+    return upstream
 
 
 def insert_proxy_group(upstream: str) -> str:
@@ -177,7 +136,6 @@ def insert_custom_rules(upstream: str, custom_rules: str) -> str:
         raise ValueError("Missing [Rule] section in upstream configuration.")
 
     before_rule, after_rule = upstream.split(marker, 1)
-
     generated_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     header = f"""
@@ -202,7 +160,7 @@ def insert_custom_rules(upstream: str, custom_rules: str) -> str:
 
 # ============================================================
 # 自定义规则结束
-# 以下为上游规则
+# 以下为上游 lazy.conf 默认规则
 # ============================================================
 
 """
@@ -215,9 +173,7 @@ def main() -> None:
         raise FileNotFoundError(f"Custom rules file not found: {CUSTOM_RULES_FILE}")
 
     upstream = fetch_upstream(UPSTREAM_URL)
-    upstream = enforce_ipv6_policy(upstream)
-    upstream = enforce_direct_dns_policy(upstream)
-    upstream = strip_fakeip_from_bypass_tun(upstream)
+    upstream = normalize_general(upstream)
 
     custom_rules = CUSTOM_RULES_FILE.read_text(encoding="utf-8")
 
