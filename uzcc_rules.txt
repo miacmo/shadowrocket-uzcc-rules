@@ -1,3 +1,8 @@
+# 强制 IPv4：拒绝所有 IPv6 目标，让应用快速回落到 v4
+# 配合 [General] 的 ipv6 = true（让 SR 接管 IPv6）+ prefer-ipv6 = false 一起生效。
+# 用 REJECT（快速拒绝/回落），不要用 REJECT-DROP（丢包超时会更慢）。
+IP-CIDR6,::/0,REJECT,no-resolve
+
 # Bing / Microsoft Copilot / 微软 AI 单独直连
 DOMAIN-SUFFIX,bing.com,DIRECT
 DOMAIN-SUFFIX,bing.net,DIRECT
