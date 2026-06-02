@@ -1,33 +1,40 @@
 from pathlib import Path
 from urllib.request import Request, urlopen
 from datetime import datetime, timezone
+import re
 
-# 使用 Johnshall 的 lazy.conf 作为底座。
-UPSTREAM_URL = "https://johnshall.github.io/Shadowrocket-ADBlock-Rules-Forever/lazy.conf"
+# 直接基于 Johnshall 的 lazy_group.conf。
+# 只增强 AI 分组：新增 AI-优先、AI-其他，并把它们合入 AI 入口。
+# 不重构上游规则，不改微信、DNS、fake-ip、IPv6 等主体逻辑。
+UPSTREAM_URL = "https://raw.githubusercontent.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever/refs/heads/release/lazy_group.conf"
 
 CUSTOM_RULES_FILE = Path("uzcc_rules.txt")
-OUTPUT_FILE = Path("sr_lazy_ai_routing.conf")
+OUTPUT_FILE = Path("sr_lazy_group_ai.conf")
 
+EXCLUDE_WORDS = (
+    "剩余|流量|到期|套餐|Expire|Traffic|官网|订阅|Subscription|"
+    "香港节点|台湾节点|台灣节点|日本节点|新加坡节点|韩国节点|韓國节点|美国节点|美國节点"
+)
 
-CUSTOM_PROXY_GROUP = """
-[Proxy Group]
+AI_PRIORITY_GROUP = (
+    "AI-优先 = select,"
+    "policy-regex-filter=^(?=.*(台湾-|台灣-|TW-|Taiwan-|🇹🇼-))"
+    f"(?!.*({EXCLUDE_WORDS})).*$"
+)
 
-# AI 分流入口，优先使用命名为“台湾-”的节点，其余地区可手动选择
-AI = select,AI-优先,AI-台湾,AI-香港,AI-新加坡,AI-日本,AI-美国,AI-其他,PROXY,DIRECT
+AI_OTHER_GROUP = (
+    "AI-其他 = select,"
+    "policy-regex-filter=^(?!.*("
+    "台湾|台灣|TW|Taiwan|🇹🇼|"
+    "香港|HK|Hong Kong|🇭🇰|"
+    "新加坡|狮城|SG|Singapore|🇸🇬|"
+    "日本|JP|Japan|🇯🇵|"
+    "美国|美國|US|USA|United States|America|🇺🇸|"
+    f"{EXCLUDE_WORDS}"
+    ")).*$"
+)
 
-# 优先入口：只收录“台湾- / 台灣- / TW- / Taiwan- / 🇹🇼-”这类标准前缀节点
-AI-优先 = select,policy-regex-filter=^(?=.*(台湾-|台灣-|TW-|Taiwan-|🇹🇼-))(?!.*(剩余|流量|到期|套餐|Expire|Traffic|官网|订阅|Subscription)).*$
-
-# 地区入口：按节点名称自动归类，排除订阅信息类节点
-AI-台湾 = select,policy-regex-filter=^(?=.*(台湾|台灣|TW|Taiwan|🇹🇼))(?!.*(剩余|流量|到期|套餐|Expire|Traffic|官网|订阅|Subscription)).*$
-AI-香港 = select,policy-regex-filter=^(?=.*(香港|HK|Hong Kong|🇭🇰))(?!.*(剩余|流量|到期|套餐|Expire|Traffic|官网|订阅|Subscription)).*$
-AI-新加坡 = select,policy-regex-filter=^(?=.*(新加坡|狮城|SG|Singapore|🇸🇬))(?!.*(剩余|流量|到期|套餐|Expire|Traffic|官网|订阅|Subscription)).*$
-AI-日本 = select,policy-regex-filter=^(?=.*(日本|JP|Japan|🇯🇵))(?!.*(剩余|流量|到期|套餐|Expire|Traffic|官网|订阅|Subscription)).*$
-AI-美国 = select,policy-regex-filter=^(?=.*(美国|美國|US|USA|United States|America|🇺🇸))(?!.*(剩余|流量|到期|套餐|Expire|Traffic|官网|订阅|Subscription)).*$
-
-# 其他未命中上述地区关键词的节点
-AI-其他 = select,policy-regex-filter=^(?!.*(台湾|台灣|TW|Taiwan|🇹🇼|香港|HK|Hong Kong|🇭🇰|新加坡|狮城|SG|Singapore|🇸🇬|日本|JP|Japan|🇯🇵|美国|美國|US|USA|United States|America|🇺🇸|剩余|流量|到期|套餐|Expire|Traffic|官网|订阅|Subscription)).*$
-"""
+AI_ENTRY = "AI = select,AI-优先,AI-台湾,AI-香港,AI-新加坡,AI-日本,AI-美国,AI-其他,PROXY,DIRECT"
 
 
 def fetch_upstream(url: str) -> str:
@@ -39,103 +46,81 @@ def fetch_upstream(url: str) -> str:
         return response.read().decode("utf-8")
 
 
-def upsert_general_key(config: str, key: str, value: str) -> str:
+def split_sections(config: str, section_name: str) -> tuple[str, str, str]:
     """
-    只在 [General] 段内更新或插入指定键。
+    返回 section 前、section 内容、section 后。
+    section_name 例：[Proxy Group]
     """
-    lines = config.splitlines()
-    out = []
-    in_general = False
-    found = False
+    start = config.find(section_name)
+    if start == -1:
+        raise ValueError(f"Missing {section_name} section.")
+
+    next_section = re.search(r"\n\[[^\]]+\]", config[start + len(section_name):])
+    if next_section:
+        end = start + len(section_name) + next_section.start()
+    else:
+        end = len(config)
+
+    return config[:start], config[start:end], config[end:]
+
+
+def enhance_ai_proxy_group(config: str) -> str:
+    """
+    只处理 [Proxy Group] 中的 AI 相关分组：
+    1. 把 AI 入口替换为包含 AI-优先 和 AI-其他的新入口；
+    2. 删除旧的 AI-优先 / AI-其他，避免重复；
+    3. 在 AI 入口后插入新的 AI-优先 / AI-其他；
+    4. 不重写上游已有的 AI-台湾 / AI-香港 / AI-新加坡 / AI-日本 / AI-美国。
+    """
+    before, section, after = split_sections(config, "[Proxy Group]")
+    lines = section.splitlines()
+
+    new_lines = []
+    inserted_extra_groups = False
+    found_ai_entry = False
 
     for line in lines:
         stripped = line.strip()
-        lower = stripped.lower()
 
-        if stripped.startswith("[") and stripped.endswith("]"):
-            if in_general and not found:
-                out.append(f"{key} = {value}")
-                found = True
-            in_general = lower == "[general]"
+        if stripped.startswith("AI-优先"):
+            continue
+        if stripped.startswith("AI-其他"):
+            continue
 
-        if in_general and lower.startswith(f"{key.lower()}"):
-            out.append(f"{key} = {value}")
-            found = True
-        else:
-            out.append(line)
+        if stripped.startswith("AI ="):
+            new_lines.append(AI_ENTRY)
+            new_lines.append("")
+            new_lines.append("# AI 优先入口：只收录标准台湾前缀节点")
+            new_lines.append(AI_PRIORITY_GROUP)
+            new_lines.append("")
+            new_lines.append("# AI 其他入口：排除已归类地区、上游区域策略组和订阅信息节点")
+            new_lines.append(AI_OTHER_GROUP)
+            inserted_extra_groups = True
+            found_ai_entry = True
+            continue
 
-    if in_general and not found:
-        out.append(f"{key} = {value}")
+        new_lines.append(line)
 
-    return "\n".join(out) + ("\n" if config.endswith("\n") else "")
+    if not found_ai_entry:
+        raise ValueError("Missing AI entry in [Proxy Group].")
+
+    if not inserted_extra_groups:
+        raise RuntimeError("Failed to insert AI extra groups.")
+
+    return before + "\n".join(new_lines) + after
 
 
-def remove_cidr_from_general_list(config: str, keys: tuple[str, ...], target: str) -> str:
+def insert_custom_rules(config: str, custom_rules: str) -> str:
     """
-    从 bypass-tun / tun-excluded-routes 等列表字段里移除指定 CIDR。
-    这里保留这个修正是为了避免上游变动时把 fake-ip 段重新放回 TUN 绕行列表。
+    把自定义规则插入 [Rule] 顶部，优先于上游规则。
+    这里主要放 Bing/Copilot 直连、AI 规则、ChinaMax。
     """
-    out = []
-    for line in config.splitlines():
-        stripped = line.strip()
-        lower = stripped.lower()
-        if any(lower.startswith(k.lower()) for k in keys) and target in line:
-            key, sep, value = line.partition("=")
-            if sep:
-                cidrs = [
-                    item.strip()
-                    for item in value.split(",")
-                    if item.strip() and item.strip() != target
-                ]
-                line = f"{key.rstrip()} = " + ", ".join(cidrs)
-        out.append(line)
-    return "\n".join(out) + ("\n" if config.endswith("\n") else "")
-
-
-def normalize_general(upstream: str) -> str:
-    """
-    使用 lazy.conf 的默认 General 逻辑，不强行上 always-real-ip / dns-direct-system。
-    只做两件确定需要的事：
-    1. 接管 IPv6，但不优先 IPv6 回源；
-    2. 防止 198.18.0.0/15 被放进 TUN 绕行列表。
-    """
-    upstream = upsert_general_key(upstream, "ipv6", "true")
-    upstream = upsert_general_key(upstream, "prefer-ipv6", "false")
-
-    # 不启用 dns-direct-system。默认规则能正常微信，就不要再强改 DNS 行为。
-    # 如果上游已有 dns-direct-system，统一设为 false。
-    upstream = upsert_general_key(upstream, "dns-direct-system", "false")
-
-    upstream = remove_cidr_from_general_list(
-        upstream,
-        keys=("bypass-tun", "tun-excluded-routes"),
-        target="198.18.0.0/15",
-    )
-    return upstream
-
-
-def insert_proxy_group(upstream: str) -> str:
     marker = "[Rule]"
-    if marker not in upstream:
-        raise ValueError("Missing [Rule] section in upstream configuration.")
+    if marker not in config:
+        raise ValueError("Missing [Rule] section.")
 
-    before_rule, after_rule = upstream.split(marker, 1)
+    before_rule, after_rule = config.split(marker, 1)
 
-    return (
-        before_rule.rstrip()
-        + "\n\n"
-        + CUSTOM_PROXY_GROUP.strip()
-        + "\n\n[Rule]"
-        + after_rule
-    )
-
-
-def insert_custom_rules(upstream: str, custom_rules: str) -> str:
-    marker = "[Rule]"
-    if marker not in upstream:
-        raise ValueError("Missing [Rule] section in upstream configuration.")
-
-    before_rule, after_rule = upstream.split(marker, 1)
     generated_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     header = f"""
@@ -160,7 +145,7 @@ def insert_custom_rules(upstream: str, custom_rules: str) -> str:
 
 # ============================================================
 # 自定义规则结束
-# 以下为上游 lazy.conf 默认规则
+# 以下为上游 lazy_group.conf 默认规则
 # ============================================================
 
 """
@@ -173,12 +158,12 @@ def main() -> None:
         raise FileNotFoundError(f"Custom rules file not found: {CUSTOM_RULES_FILE}")
 
     upstream = fetch_upstream(UPSTREAM_URL)
-    upstream = normalize_general(upstream)
+
+    # 只增强 AI 策略组，不碰上游 General / Rule 主体逻辑。
+    enhanced = enhance_ai_proxy_group(upstream)
 
     custom_rules = CUSTOM_RULES_FILE.read_text(encoding="utf-8")
-
-    upstream_with_group = insert_proxy_group(upstream)
-    merged = insert_custom_rules(upstream_with_group, custom_rules)
+    merged = insert_custom_rules(enhanced, custom_rules)
 
     OUTPUT_FILE.write_text(merged, encoding="utf-8")
     print(f"Generated {OUTPUT_FILE}")
