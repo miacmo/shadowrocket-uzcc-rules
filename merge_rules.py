@@ -7,7 +7,8 @@ import re
 # 只增强 [Proxy Group] 中的 AI 分组：
 # 1. 新增 优先节点；
 # 2. 新增 其他节点；
-# 3. 保留上游 AI 分组原有选项；
+# 3. AI 默认选择 优先节点；
+# 4. 保留上游 AI 分组原有选项；
 UPSTREAM_URL = "https://raw.githubusercontent.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever/refs/heads/release/lazy_group.conf"
 
 OUTPUT_FILE = Path("sr_lazy_group_ai.conf")
@@ -80,7 +81,7 @@ def upsert_general_key(config: str, key: str, value: str) -> str:
 def rebuild_ai_entry(line: str) -> str:
     """
     保留上游 AI = select,... 的原有选项，只插入 优先节点 和 其他节点。
-    优先节点放在香港节点上面；
+    优先节点放在 AI 入口第一位，使 AI 默认选择优先节点，而不是 PROXY。
     其他节点放在 AI 选项列表最底部。
     """
     _, _, value = line.partition("=")
@@ -95,21 +96,8 @@ def rebuild_ai_entry(line: str) -> str:
     # 防止脚本重复运行后重复插入，并兼容旧名称。
     choices = [item for item in choices if item not in {"AI-优先", "AI-其他", "优先节点", "其他节点"}]
 
-    new_choices = []
-    inserted_priority = False
-
-    # “优先节点”放在香港节点上面。若上游没有香港节点，则放到列表第一位。
-    for item in choices:
-        if not inserted_priority and item in {"香港节点", "AI-香港", "香港", "Hong Kong", "HK"}:
-            new_choices.append("优先节点")
-            inserted_priority = True
-        new_choices.append(item)
-
-    if not inserted_priority:
-        new_choices.insert(0, "优先节点")
-
-    # “其他节点”放到列表最下面。
-    new_choices.append("其他节点")
+    # 关键：优先节点必须是 select 后第一项，这样默认不会落到 PROXY。
+    new_choices = ["优先节点"] + choices + ["其他节点"]
 
     return "AI = " + ",".join([group_type] + new_choices)
 
