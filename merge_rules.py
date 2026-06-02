@@ -8,33 +8,39 @@ import re
 # 1. 新增 优先节点；
 # 2. 新增 其他节点；
 # 3. AI 默认选择 优先节点；
-# 4. 保留上游 AI 分组原有选项。
+# 4. 保留上游 AI 分组原有选项；
+# 5. 不改 [Rule] 主体，不改微信、DNS、fake-ip、IPv6。
 UPSTREAM_URL = "https://raw.githubusercontent.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever/refs/heads/release/lazy_group.conf"
 
 OUTPUT_FILE = Path("sr_lazy_group_ai.conf")
 UPDATE_URL = "https://raw.githubusercontent.com/miacmo/shadowrocket-uzcc-rules/main/sr_lazy_group_ai.conf"
 
-EXCLUDE_WORDS = (
+# 排除订阅信息节点和上游区域策略组本身。
+EXCLUDE_META_WORDS = (
     "剩余|流量|到期|套餐|Expire|Traffic|官网|订阅|Subscription|"
     "香港节点|台湾节点|台灣节点|日本节点|新加坡节点|韩国节点|韓國节点|美国节点|美國节点"
+)
+
+# 已归类地区关键词。其他节点必须排除这些真实节点关键词。
+# 注意：韩国真实节点之前会漏进“其他节点”，所以这里补入 KR / Korea / 韩国 / 韓 / 首尔 / 春川等。
+REGION_WORDS = (
+    "台湾|台灣|TW|TWN|Taiwan|Taipei|taiwan|台北|台中|新北|彰化|🇹🇼|"
+    "香港|HK|Hong Kong|Hong|hong|深港|沪港|京港|港|🇭🇰|"
+    "新加坡|狮城|SG|Sing|Singapore|sing|沪新|京新|深新|杭新|广新|🇸🇬|"
+    "日本|JP|Japan|japan|Tokyo|tokyo|东京|大阪|京日|苏日|沪日|上日|川日|深日|广日|日|🇯🇵|"
+    "韩国|韓國|KR|Korea|korea|KOR|首尔|首爾|韩|韓|春川|🇰🇷|"
+    "美国|美國|US|USA|America|america|United States|凤凰城|洛杉矶|洛杉磯|西雅图|西雅圖|芝加哥|纽约|紐約|沪美|美|🇺🇸"
 )
 
 PRIORITY_NODE_GROUP = (
     "优先节点 = select,"
     "policy-regex-filter=^(?=.*(台湾-|台灣-|TW-|Taiwan-|🇹🇼-))"
-    f"(?!.*({EXCLUDE_WORDS})).*$"
+    f"(?!.*({EXCLUDE_META_WORDS})).*$"
 )
 
 OTHER_NODE_GROUP = (
     "其他节点 = select,"
-    "policy-regex-filter=^(?!.*("
-    "台湾|台灣|TW|Taiwan|🇹🇼|"
-    "香港|HK|Hong Kong|🇭🇰|"
-    "新加坡|狮城|SG|Singapore|🇸🇬|"
-    "日本|JP|Japan|🇯🇵|"
-    "美国|美國|US|USA|United States|America|🇺🇸|"
-    f"{EXCLUDE_WORDS}"
-    ")).*$"
+    f"policy-regex-filter=^(?!.*({REGION_WORDS}|{EXCLUDE_META_WORDS})).*$"
 )
 
 
@@ -90,7 +96,6 @@ def rebuild_ai_entry(line: str) -> str:
     保留上游 AI = select,... 的原有选项，只插入 优先节点 和 其他节点。
     修正：
     - 上游 AI 里通常带 policy-select-name=PROXY，必须改成 policy-select-name=优先节点；
-    - 否则即使 优先节点 放第一项，Shadowrocket 仍可能默认选 PROXY；
     - 其他节点 放在所有策略项之后、参数项之前。
     """
     _, _, value = line.partition("=")
@@ -170,7 +175,7 @@ def enhance_ai_group(config: str) -> str:
 
     # 把“其他节点”放到 [Proxy Group] 最下面。
     output.append("")
-    output.append("# 其他节点：排除已归类地区、上游区域策略组和订阅信息节点")
+    output.append("# 其他节点：排除已归类地区、韩国节点、上游区域策略组和订阅信息节点")
     output.append(OTHER_NODE_GROUP)
 
     return join_sections(before, output, after)
